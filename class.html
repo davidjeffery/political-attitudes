@@ -1,196 +1,365 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Class Political Attitudes</title>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>
+Political Attitudes in the Room
+</title>
+
+
+<!-- Supabase -->
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+</script>
+
+
+<!-- Chart.js: main ideological scatterplot -->
+<script
+  src="https://cdn.jsdelivr.net/npm/chart.js">
+</script>
+
+
+<!-- Plotly: violin plot -->
+<script
+  src="https://cdn.plot.ly/plotly-2.35.2.min.js">
+</script>
+
 
 <style>
 
 :root {
+
   --navy: #212b58;
   --text: #252525;
-  --muted: #666;
+  --muted: #666666;
   --grid: #dddddd;
   --background: #ffffff;
+
 }
+
 
 * {
   box-sizing: border-box;
 }
 
+
 html,
 body {
+
   margin: 0;
+
   width: 100%;
   height: 100%;
+
   overflow: hidden;
+
 }
 
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: var(--background);
-  color: var(--text);
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background:
+    var(--background);
+
+  color:
+    var(--text);
+
 }
+
 
 /* ==========================================================
    HEADER
    ========================================================== */
 
 header {
-  height: 105px;
-  padding: 15px 30px 5px;
-  text-align: center;
+
+  height: 100px;
+
+  padding:
+    12px
+    30px
+    4px;
+
+  text-align:
+    center;
+
 }
+
 
 h1 {
+
   margin: 0;
-  color: var(--navy);
-  font-size: clamp(25px, 2.1vw, 38px);
+
+  color:
+    var(--navy);
+
+  font-size:
+    clamp(
+      25px,
+      2.1vw,
+      38px
+    );
+
 }
+
 
 .subtitle {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: clamp(13px, 1vw, 18px);
+
+  margin-top:
+    5px;
+
+  color:
+    var(--muted);
+
+  font-size:
+    clamp(
+      13px,
+      1vw,
+      18px
+    );
+
 }
+
 
 .response-count {
-  margin-top: 5px;
-  font-size: clamp(15px, 1.1vw, 20px);
-  font-weight: bold;
+
+  margin-top:
+    5px;
+
+  font-size:
+    clamp(
+      15px,
+      1.1vw,
+      20px
+    );
+
+  font-weight:
+    bold;
+
 }
 
+
 /* ==========================================================
-   MAIN 9:9 + 6:9 LAYOUT
+   9:9 + 6:9 LAYOUT
    ========================================================== */
 
 .visuals {
-  height: calc(100vh - 105px);
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  height:
+    calc(
+      100vh - 100px
+    );
 
-  gap: 22px;
+  display:
+    flex;
+
+  justify-content:
+    center;
+
+  align-items:
+    center;
+
+  gap:
+    20px;
 
   padding:
-    8px
-    25px
-    22px;
+    5px
+    24px
+    18px;
+
 }
 
+
 /*
-LEFT:
-9 wide × 9 high
+LEFT PANEL
+9 × 9
 */
 
 .ideology-panel {
-  height: 100%;
-  aspect-ratio: 1 / 1;
 
-  min-width: 0;
-  min-height: 0;
+  height:
+    100%;
 
-  position: relative;
+  aspect-ratio:
+    1 / 1;
 
-  background: white;
+  min-width:
+    0;
+
+  min-height:
+    0;
+
+  position:
+    relative;
+
+  background:
+    white;
 
   border:
     1px solid
     #e3e3e3;
 
-  border-radius: 8px;
+  border-radius:
+    8px;
 
-  padding: 10px;
+  padding:
+    8px;
+
 }
 
+
 /*
-RIGHT:
-6 wide × 9 high
+RIGHT PANEL
+6 × 9
 */
 
 .populism-panel {
-  height: 100%;
-  aspect-ratio: 2 / 3;
 
-  min-width: 0;
-  min-height: 0;
+  height:
+    100%;
 
-  position: relative;
+  aspect-ratio:
+    2 / 3;
 
-  background: white;
+  min-width:
+    0;
+
+  min-height:
+    0;
+
+  position:
+    relative;
+
+  background:
+    white;
 
   border:
     1px solid
     #e3e3e3;
 
-  border-radius: 8px;
+  border-radius:
+    8px;
 
   padding:
-    10px
-    12px
-    8px;
+    4px;
+
 }
 
+
+#populismPlot {
+
+  width:
+    100%;
+
+  height:
+    100%;
+
+}
+
+
 /* ==========================================================
-   RESPONSIVE FALLBACK
+   SMALL-SCREEN FALLBACK
    ========================================================== */
 
-@media (max-aspect-ratio: 4/3) {
+@media
+(max-aspect-ratio: 4/3) {
 
   html,
   body {
-    overflow: auto;
+
+    overflow:
+      auto;
+
   }
+
 
   .visuals {
-    height: auto;
-    flex-direction: column;
+
+    height:
+      auto;
+
+    flex-direction:
+      column;
+
   }
+
 
   .ideology-panel {
-    width: 95vw;
-    height: auto;
+
+    width:
+      95vw;
+
+    height:
+      auto;
+
   }
 
+
   .populism-panel {
-    width: 70vw;
-    height: auto;
+
+    width:
+      70vw;
+
+    height:
+      650px;
+
   }
 
 }
 
 </style>
+
 </head>
 
 
 <body>
 
+
 <header>
 
-  <h1>Political attitudes in the room</h1>
+  <h1>
+    Political attitudes in the room
+  </h1>
 
   <div class="subtitle">
-    Economic left–right position, libertarian–authoritarian values and populism
+
+    Economic left–right position,
+    libertarian–authoritarian values
+    and populism
+
   </div>
 
   <div
     id="count"
     class="response-count">
+
     0 responses
+
   </div>
 
 </header>
 
 
+
 <div class="visuals">
 
-  <!-- 9 × 9 ideological space -->
+
+  <!-- =========================================
+       LEFT: TWO-DIMENSIONAL IDEOLOGICAL SPACE
+       ========================================= -->
+
   <div class="ideology-panel">
 
     <canvas
@@ -200,14 +369,19 @@ RIGHT:
   </div>
 
 
-  <!-- 6 × 9 populism distribution -->
+
+  <!-- =========================================
+       RIGHT: POPULISM VIOLIN PLOT
+       ========================================= -->
+
   <div class="populism-panel">
 
-    <canvas
-      id="populismChart">
-    </canvas>
+    <div
+      id="populismPlot">
+    </div>
 
   </div>
+
 
 </div>
 
@@ -215,11 +389,14 @@ RIGHT:
 
 <script>
 
+
 /* ==========================================================
    1. SUPABASE CONNECTION
 
-   COPY THESE TWO VALUES FROM YOUR WORKING index.html
+   COPY THE SAME TWO VALUES FROM index.html
    ========================================================== */
+
+
 
 const SUPABASE_URL =
   "https://ftlrakgamcoznsyfubdy.supabase.co";
@@ -230,781 +407,1201 @@ const SUPABASE_KEY =
 
 const db =
   supabase.createClient(
+
     SUPABASE_URL,
+
     SUPABASE_KEY
+
   );
+
 
 
 /* ==========================================================
    2. POPULISM COLOUR SCALE
 
-   Viridis-style:
-   yellow = lower populism
-   green = middle
-   purple = higher populism
+   Used for the dots on the 2D graph.
+
+   Lower populism:
+   yellow
+
+   Mid-range:
+   green/teal
+
+   Higher populism:
+   purple
    ========================================================== */
 
+
 function interpolateColour(
+
   start,
   end,
   t,
   alpha = 0.8
+
 ) {
+
 
   const r =
     Math.round(
-      start[0] +
-      (end[0] - start[0]) * t
+
+      start[0]
+      +
+      (
+        end[0]
+        -
+        start[0]
+      )
+      *
+      t
+
     );
+
 
   const g =
     Math.round(
-      start[1] +
-      (end[1] - start[1]) * t
+
+      start[1]
+      +
+      (
+        end[1]
+        -
+        start[1]
+      )
+      *
+      t
+
     );
+
 
   const b =
     Math.round(
-      start[2] +
-      (end[2] - start[2]) * t
+
+      start[2]
+      +
+      (
+        end[2]
+        -
+        start[2]
+      )
+      *
+      t
+
     );
 
-  return `rgba(${r},${g},${b},${alpha})`;
+
+  return (
+
+    `rgba(
+      ${r},
+      ${g},
+      ${b},
+      ${alpha}
+    )`
+
+  );
 
 }
 
 
+
 function populismColour(
+
   score,
   alpha = 0.82
+
 ) {
 
+
   const low =
-    [253, 231, 37];
+    [
+      253,
+      231,
+      37
+    ];
+
 
   const middle =
-    [33, 145, 140];
+    [
+      33,
+      145,
+      140
+    ];
+
 
   const high =
-    [68, 1, 84];
+    [
+      68,
+      1,
+      84
+    ];
 
 
-  if (score <= 50) {
+  if (
+    score <= 50
+  ) {
+
 
     return interpolateColour(
+
       low,
+
       middle,
+
       score / 50,
+
       alpha
+
     );
+
 
   }
 
 
   return interpolateColour(
+
     middle,
+
     high,
-    (score - 50) / 50,
+
+    (
+      score - 50
+    )
+    /
+    50,
+
     alpha
+
   );
 
 }
 
 
+
 /* ==========================================================
-   3. LEFT-HAND IDEOLOGICAL SPACE
+   3. TWO-DIMENSIONAL POLITICAL SPACE
    ========================================================== */
 
+
 const politicalCanvas =
+
   document.getElementById(
     "politicalChart"
   );
 
 
+
 const politicalChart =
+
   new Chart(
+
     politicalCanvas,
+
     {
 
-      type: "scatter",
+
+      type:
+        "scatter",
+
 
       data: {
 
+
         datasets: [
 
+
           {
+
 
             label:
               "Respondents",
 
-            data: [],
 
-            pointRadius: 6,
+            data:
+              [],
 
-            pointHoverRadius: 9,
-
-            pointBackgroundColor:
-              context => {
-
-                if (!context.raw) {
-                  return "#777";
-                }
-
-                return populismColour(
-                  context.raw.populism
-                );
-
-              },
-
-            pointBorderColor:
-              "rgba(0,0,0,0.25)",
-
-            pointBorderWidth:
-              1
-
-          }
-
-        ]
-
-      },
-
-
-      options: {
-
-        responsive: true,
-
-        maintainAspectRatio: false,
-
-        animation: {
-          duration: 350
-        },
-
-        layout: {
-
-          padding: {
-            top: 5,
-            right: 5,
-            bottom: 5,
-            left: 5
-          }
-
-        },
-
-
-        scales: {
-
-          x: {
-
-            min: -100,
-            max: 100,
-
-            title: {
-
-              display: true,
-
-              text:
-                "LEFT   ←   Economic position   →   RIGHT",
-
-              color:
-                "#212b58",
-
-              font: {
-                size: 16,
-                weight: "bold"
-              }
-
-            },
-
-            ticks: {
-
-              stepSize: 25,
-
-              font: {
-                size: 13
-              }
-
-            },
-
-            grid: {
-
-              color:
-                context =>
-                  context.tick.value === 0
-                  ? "#555"
-                  : "#dddddd",
-
-              lineWidth:
-                context =>
-                  context.tick.value === 0
-                  ? 2
-                  : 1
-
-            }
-
-          },
-
-
-          y: {
-
-            min: -100,
-            max: 100,
-
-            title: {
-
-              display: true,
-
-              text:
-                "LIBERTARIAN   ←   Values   →   AUTHORITARIAN",
-
-              color:
-                "#212b58",
-
-              font: {
-                size: 16,
-                weight: "bold"
-              }
-
-            },
-
-            ticks: {
-
-              stepSize: 25,
-
-              font: {
-                size: 13
-              }
-
-            },
-
-            grid: {
-
-              color:
-                context =>
-                  context.tick.value === 0
-                  ? "#555"
-                  : "#dddddd",
-
-              lineWidth:
-                context =>
-                  context.tick.value === 0
-                  ? 2
-                  : 1
-
-            }
-
-          }
-
-        },
-
-
-        plugins: {
-
-          title: {
-
-            display: true,
-
-            text:
-              "Left–right and libertarian–authoritarian position",
-
-            color:
-              "#212b58",
-
-            font: {
-              size: 18,
-              weight: "bold"
-            },
-
-            padding: {
-              bottom: 8
-            }
-
-          },
-
-
-          legend: {
-            display: false
-          },
-
-
-          tooltip: {
-
-            callbacks: {
-
-              label:
-                context => {
-
-                  const p =
-                    context.raw;
-
-                  return [
-
-                    `Left–right: ${Math.round(p.x)}`,
-
-                    `Lib–Auth: ${Math.round(p.y)}`,
-
-                    `Populism: ${Math.round(p.populism)}`
-
-                  ];
-
-                }
-
-            }
-
-          }
-
-        }
-
-      }
-
-    }
-  );
-
-
-/* ==========================================================
-   4. MAKE POPULISM BEESWARM
-
-   Vertical scale:
-   0   = lower populism
-   100 = higher populism
-
-   Horizontal position has NO substantive meaning.
-   It is only used to separate overlapping observations.
-   ========================================================== */
-
-function makeBeeswarm(
-  results
-) {
-
-  const sorted =
-    results
-      .map(r => ({
-        score:
-          Number(r.populism)
-      }))
-      .sort(
-        (a, b) =>
-          a.score - b.score
-      );
-
-
-  const bins = {};
-
-  const points = [];
-
-
-  sorted.forEach(
-    respondent => {
-
-      const score =
-        respondent.score;
-
-
-      /*
-      Group nearby results together.
-
-      A 4-point bin works well
-      for roughly 50–200 respondents.
-      */
-
-      const bin =
-        Math.round(
-          score / 4
-        );
-
-
-      if (
-        bins[bin] === undefined
-      ) {
-
-        bins[bin] = 0;
-
-      }
-
-
-      const position =
-        bins[bin];
-
-
-      /*
-      Symmetrical horizontal stacking:
-
-      0
-      +1
-      -1
-      +2
-      -2
-      etc.
-      */
-
-      let offset = 0;
-
-
-      if (position > 0) {
-
-        const level =
-          Math.ceil(
-            position / 2
-          );
-
-
-        offset =
-          position % 2 === 1
-          ? level
-          : -level;
-
-      }
-
-
-      points.push({
-
-        x:
-          offset,
-
-        y:
-          score,
-
-        populism:
-          score
-
-      });
-
-
-      bins[bin]++;
-
-    }
-  );
-
-
-  return points;
-
-}
-
-
-/* ==========================================================
-   5. RIGHT-HAND POPULISM BEESWARM
-   ========================================================== */
-
-const populismCanvas =
-  document.getElementById(
-    "populismChart"
-  );
-
-
-const populismChart =
-  new Chart(
-    populismCanvas,
-    {
-
-      type: "scatter",
-
-      data: {
-
-        datasets: [
-
-          {
-
-            label:
-              "Respondents",
-
-            data: [],
 
             pointRadius:
               6,
 
+
             pointHoverRadius:
               9,
 
+
             pointBackgroundColor:
+
               context => {
 
-                if (!context.raw) {
-                  return "#777";
+
+                if (
+                  !context.raw
+                ) {
+
+                  return "#777777";
+
                 }
 
+
                 return populismColour(
-                  context.raw.populism,
-                  0.85
+
+                  context
+                    .raw
+                    .populism
+
                 );
 
               },
 
+
             pointBorderColor:
+
               "rgba(0,0,0,0.25)",
+
 
             pointBorderWidth:
               1
 
+
           }
 
+
         ]
+
 
       },
 
 
+
       options: {
 
-        responsive: true,
 
-        maintainAspectRatio: false,
+        responsive:
+          true,
+
+
+        maintainAspectRatio:
+          false,
+
 
         animation: {
-          duration: 350
+
+          duration:
+            350
+
         },
 
 
         layout: {
 
+
           padding: {
-            top: 5,
-            right: 15,
-            bottom: 5,
-            left: 5
+
+            top:
+              5,
+
+            right:
+              5,
+
+            bottom:
+              5,
+
+            left:
+              5
+
           }
 
+
         },
+
 
 
         scales: {
 
-          /*
-          Horizontal position is just
-          the beeswarm displacement.
-          */
 
           x: {
 
-            min: -9,
-            max: 9,
 
-            display: false,
-
-            grid: {
-              display: false
-            },
-
-            border: {
-              display: false
-            }
-
-          },
+            min:
+              -100,
 
 
-          /*
-          The meaningful populism axis.
-          */
+            max:
+              100,
 
-          y: {
-
-            min: 0,
-            max: 100,
 
             title: {
 
-              display: true,
+
+              display:
+                true,
+
 
               text:
-                "POPULISM SCORE",
+
+                "LEFT   ←   Economic position   →   RIGHT",
+
 
               color:
                 "#212b58",
 
+
               font: {
-                size: 16,
-                weight: "bold"
+
+                size:
+                  16,
+
+                weight:
+                  "bold"
+
               }
 
+
             },
+
 
             ticks: {
 
-              stepSize: 20,
+
+              stepSize:
+                25,
+
 
               font: {
-                size: 14
+
+                size:
+                  13
+
               }
+
 
             },
 
+
             grid: {
 
+
               color:
-                "#e4e4e4",
+
+                context =>
+
+                  context
+                    .tick
+                    .value === 0
+
+                    ? "#555555"
+
+                    : "#dddddd",
+
 
               lineWidth:
-                1
+
+                context =>
+
+                  context
+                    .tick
+                    .value === 0
+
+                    ? 2
+
+                    : 1
+
 
             }
 
+
+          },
+
+
+
+          y: {
+
+
+            min:
+              -100,
+
+
+            max:
+              100,
+
+
+            title: {
+
+
+              display:
+                true,
+
+
+              text:
+
+                "LIBERTARIAN   ←   Values   →   AUTHORITARIAN",
+
+
+              color:
+                "#212b58",
+
+
+              font: {
+
+                size:
+                  16,
+
+                weight:
+                  "bold"
+
+              }
+
+
+            },
+
+
+            ticks: {
+
+
+              stepSize:
+                25,
+
+
+              font: {
+
+                size:
+                  13
+
+              }
+
+
+            },
+
+
+            grid: {
+
+
+              color:
+
+                context =>
+
+                  context
+                    .tick
+                    .value === 0
+
+                    ? "#555555"
+
+                    : "#dddddd",
+
+
+              lineWidth:
+
+                context =>
+
+                  context
+                    .tick
+                    .value === 0
+
+                    ? 2
+
+                    : 1
+
+
+            }
+
+
           }
+
 
         },
 
 
+
         plugins: {
+
 
           title: {
 
-            display: true,
+
+            display:
+              true,
+
 
             text:
-              "Distribution of populist attitudes",
+
+              "Left–right and libertarian–authoritarian position",
+
 
             color:
               "#212b58",
 
+
             font: {
-              size: 18,
-              weight: "bold"
+
+              size:
+                18,
+
+              weight:
+                "bold"
+
             },
 
+
             padding: {
-              bottom: 8
+
+              bottom:
+                8
+
             }
 
+
           },
+
 
 
           legend: {
-            display: false
+
+            display:
+              false
+
           },
+
 
 
           tooltip: {
 
+
             callbacks: {
 
+
               label:
-                context =>
-                  `Populism: ${Math.round(context.raw.populism)}`
+
+                context => {
+
+
+                  const p =
+                    context.raw;
+
+
+                  return [
+
+
+                    `Left–right: ${
+                      Math.round(
+                        p.x
+                      )
+                    }`,
+
+
+                    `Lib–Auth: ${
+                      Math.round(
+                        p.y
+                      )
+                    }`,
+
+
+                    `Populism: ${
+                      Math.round(
+                        p.populism
+                      )
+                    }`
+
+
+                  ];
+
+
+                }
+
 
             }
 
+
           }
+
 
         }
 
+
       }
 
+
     }
+
   );
 
 
+
 /* ==========================================================
-   6. RETRIEVE AND DISPLAY DATA
+   4. POPULISM VIOLIN PLOT
    ========================================================== */
 
-async function refreshResults() {
 
-  const {
-    data,
-    error
-  } =
-    await db
-      .from("responses")
-      .select(
-        "left_right, lib_auth, populism"
+function updateViolinPlot(
+
+  results
+
+) {
+
+
+  const scores =
+
+    results
+
+      .map(
+
+        r =>
+          Number(
+            r.populism
+          )
+
+      )
+
+      .filter(
+
+        score =>
+          Number.isFinite(
+            score
+          )
+
       );
 
 
-  if (error) {
+
+  /*
+  Plotly violin trace.
+
+  The box and meanline make the distribution
+  easier to interpret in a lecture.
+  */
+
+
+  const trace = {
+
+
+    type:
+      "violin",
+
+
+    y:
+      scores,
+
+
+    name:
+      "",
+
+
+    orientation:
+      "v",
+
+
+    box: {
+
+      visible:
+        true
+
+    },
+
+
+    meanline: {
+
+      visible:
+        true
+
+    },
+
+
+    points:
+      false,
+
+
+    spanmode:
+      "hard",
+
+
+    span: [
+      0,
+      100
+    ],
+
+
+    scalemode:
+      "width",
+
+
+    width:
+      0.8,
+
+
+    line: {
+
+      color:
+        "rgb(33,145,140)",
+
+      width:
+        2
+
+    },
+
+
+    fillcolor:
+      "rgba(33,145,140,0.55)",
+
+
+    hoveron:
+      "violins+kde",
+
+
+    hovertemplate:
+
+      "Populism score: %{y:.1f}<extra></extra>"
+
+
+  };
+
+
+
+  const layout = {
+
+
+    title: {
+
+
+      text:
+
+        "Distribution of populist attitudes",
+
+
+      font: {
+
+        size:
+          20,
+
+        color:
+          "#212b58"
+
+      },
+
+
+      x:
+        0.5,
+
+
+      xanchor:
+        "center"
+
+
+    },
+
+
+    margin: {
+
+      l:
+        72,
+
+      r:
+        30,
+
+      t:
+        65,
+
+      b:
+        55
+
+    },
+
+
+    paper_bgcolor:
+      "#ffffff",
+
+
+    plot_bgcolor:
+      "#ffffff",
+
+
+    showlegend:
+      false,
+
+
+    xaxis: {
+
+
+      visible:
+        false,
+
+
+      fixedrange:
+        true
+
+
+    },
+
+
+    yaxis: {
+
+
+      range: [
+        0,
+        100
+      ],
+
+
+      fixedrange:
+        true,
+
+
+      dtick:
+        20,
+
+
+      title: {
+
+
+        text:
+          "POPULISM SCORE",
+
+
+        font: {
+
+          size:
+            16,
+
+          color:
+            "#212b58"
+
+        }
+
+
+      },
+
+
+      tickfont: {
+
+        size:
+          14,
+
+        color:
+          "#333333"
+
+      },
+
+
+      gridcolor:
+        "#dddddd",
+
+
+      zeroline:
+        false
+
+
+    },
+
+
+    annotations: [
+
+
+      {
+
+
+        x:
+          0.5,
+
+
+        y:
+          0,
+
+
+        xref:
+          "paper",
+
+
+        yref:
+          "paper",
+
+
+        text:
+          "Lower populism",
+
+
+        showarrow:
+          false,
+
+
+        xanchor:
+          "center",
+
+
+        yanchor:
+          "top",
+
+
+        yshift:
+          -35,
+
+
+        font: {
+
+          size:
+            13,
+
+          color:
+            "#666666"
+
+        }
+
+
+      },
+
+
+      {
+
+
+        x:
+          0.5,
+
+
+        y:
+          1,
+
+
+        xref:
+          "paper",
+
+
+        yref:
+          "paper",
+
+
+        text:
+          "Higher populism",
+
+
+        showarrow:
+          false,
+
+
+        xanchor:
+          "center",
+
+
+        yanchor:
+          "bottom",
+
+
+        yshift:
+          8,
+
+
+        font: {
+
+          size:
+            13,
+
+          color:
+            "#666666"
+
+        }
+
+
+      }
+
+
+    ]
+
+
+  };
+
+
+
+  const config = {
+
+
+    responsive:
+      true,
+
+
+    displayModeBar:
+      false,
+
+
+    staticPlot:
+      false
+
+
+  };
+
+
+
+  Plotly.react(
+
+    "populismPlot",
+
+    [trace],
+
+    layout,
+
+    config
+
+  );
+
+}
+
+
+
+/* ==========================================================
+   5. RETRIEVE DATA FROM SUPABASE
+   ========================================================== */
+
+
+async function refreshResults() {
+
+
+  const {
+
+    data,
+    error
+
+  } =
+
+
+    await db
+
+      .from(
+        "responses"
+      )
+
+      .select(
+
+        "left_right, lib_auth, populism"
+
+      );
+
+
+
+  if (
+    error
+  ) {
+
 
     console.error(
+
       "Could not retrieve results:",
+
       error
+
     );
+
 
     return;
 
   }
 
 
+
   const results =
     data || [];
 
 
-  /* -------------------------------
-     UPDATE IDEOLOGICAL SPACE
-     ------------------------------- */
+
+  /* ========================================================
+     UPDATE 2D POLITICAL SPACE
+     ======================================================== */
+
 
   politicalChart
     .data
     .datasets[0]
     .data =
 
+
       results.map(
+
         r => ({
 
+
           x:
+
             Number(
               r.left_right
             ),
 
+
           y:
+
             Number(
               r.lib_auth
             ),
 
+
           populism:
+
             Number(
               r.populism
             )
 
+
         })
+
       );
+
 
 
   politicalChart.update();
 
 
-  /* -------------------------------
-     UPDATE POPULISM BEESWARM
-     ------------------------------- */
 
-  populismChart
-    .data
-    .datasets[0]
-    .data =
-
-      makeBeeswarm(
-        results
-      );
+  /* ========================================================
+     UPDATE VIOLIN PLOT
+     ======================================================== */
 
 
-  populismChart.update();
+  updateViolinPlot(
+    results
+  );
 
 
-  /* -------------------------------
-     UPDATE N
-     ------------------------------- */
+
+  /* ========================================================
+     UPDATE RESPONSE COUNT
+     ======================================================== */
+
 
   document
-    .getElementById("count")
+    .getElementById(
+      "count"
+    )
     .textContent =
+
 
       results.length === 1
 
-      ? "1 response"
+        ? "1 response"
 
-      : `${results.length} responses`;
+        : `${results.length} responses`;
+
 
 }
 
 
-/* ==========================================================
-   7. LIVE REFRESH
 
-   Refresh immediately, then every 3 seconds.
+/* ==========================================================
+   6. LIVE UPDATE
+
+   Load immediately, then refresh every three seconds.
    ========================================================== */
+
 
 refreshResults();
 
 
 setInterval(
+
   refreshResults,
+
   3000
+
 );
+
 
 </script>
 
+
 </body>
+
 </html>
+
+
