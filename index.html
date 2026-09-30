@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Political Attitudes Explorer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --navy: #212b58;
+  --text: #252525;
+  --muted: #666;
+  --light: #f4f5f8;
+  --border: #d9dce6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f6f8;
+  color: var(--text);
+}
+
+.container {
+  width: min(850px, calc(100% - 30px));
+  margin: 30px auto;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.08);
+}
+
+h1 {
+  color: var(--navy);
+  margin-top: 0;
+}
+
+h2 {
+  line-height: 1.4;
+}
+
+p {
+  line-height: 1.5;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--navy);
+  color: white;
+  font-weight: bold;
+  padding: 13px 24px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.progress {
+  height: 8px;
+  background: #e4e5e9;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0 25px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--navy);
+  transition: width .2s ease;
+}
+
+.question-number {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.answers {
+  display: grid;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.answer {
+  padding: 14px 16px;
+  text-align: left;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.answer:hover {
+  border-color: var(--navy);
+  background: #f7f8fc;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.result-box {
+  background: var(--light);
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+}
+
+.result-box .number {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--navy);
+  margin: 6px 0;
+}
+
+.result-box .label {
+  font-weight: bold;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  margin-top: 20px;
+}
+
+.legend-title {
+  margin-top: 20px;
+  font-weight: bold;
+}
+
+.colour-key {
+  height: 16px;
+  border-radius: 8px;
+  margin-top: 7px;
+  background: linear-gradient(
+    to right,
+    #fde725,
+    #21918c,
+    #440154
+  );
+}
+
+.colour-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: .85rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.note {
+  margin-top: 24px;
+  padding: 15px;
+  background: var(--light);
+  border-radius: 8px;
+  font-size: .9rem;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+@media(max-width:650px) {
+  .container {
+    margin: 15px auto;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    height: 480px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- INTRO -->
+<div id="intro" class="card">
+
+<h1>Political Attitudes Explorer</h1>
+
+<p>
+This short questionnaire examines three dimensions of political attitudes:
+economic left–right views, libertarian–authoritarian values, and populist attitudes.
+</p>
+
+<p>
+You will be shown 16 statements in a random order. For each statement,
+select the response that most closely matches your view.
+</p>
+
+<p class="muted">
+There are no right or wrong answers. Your answers are converted into three
+anonymous scores and added to the class graph. No name, email address or
+student ID is collected.
+</p>
+
+<button class="primary" onclick="startQuiz()">Start questionnaire</button>
+
+</div>
+
+
+<!-- QUIZ -->
+<div id="quiz" class="card hidden">
+
+<div id="questionNumber" class="question-number"></div>
+
+<div class="progress">
+<div id="progressFill" class="progress-fill"></div>
+</div>
+
+<h2 id="questionText"></h2>
+
+<div class="answers">
+
+<button class="answer" onclick="answerQuestion(1)">
+<strong>Strongly disagree</strong>
+</button>
+
+<button class="answer" onclick="answerQuestion(2)">
+<strong>Disagree</strong>
+</button>
+
+<button class="answer" onclick="answerQuestion(3)">
+<strong>Neither agree nor disagree</strong>
+</button>
+
+<button class="answer" onclick="answerQuestion(4)">
+<strong>Agree</strong>
+</button>
+
+<button class="answer" onclick="answerQuestion(5)">
+<strong>Strongly agree</strong>
+</button>
+
+</div>
+
+</div>
+
+
+<!-- RESULTS -->
+<div id="results" class="card hidden">
+
+<h1>Your political attitudes</h1>
+
+<p>
+Your position is shown below alongside the anonymous responses of other
+people who have completed the questionnaire.
+</p>
+
+<div class="results-grid">
+
+<div class="result-box">
+Economic left–right
+<span id="lrNumber" class="number"></span>
+<span id="lrLabel" class="label"></span>
+</div>
+
+<div class="result-box">
+Libertarian–authoritarian
+<span id="authNumber" class="number"></span>
+<span id="authLabel" class="label"></span>
+</div>
+
+<div class="result-box">
+Populism
+<span id="popNumber" class="number"></span>
+<span id="popLabel" class="label"></span>
+</div>
+
+</div>
+
+<h2>Where do you fit?</h2>
+
+<p class="muted">
+Horizontal position shows economic left–right attitudes. Vertical position
+shows libertarian–authoritarian attitudes. Colour represents the populism score.
+Your own result has a black outline.
+</p>
+
+<div class="chart-container">
+<canvas id="politicalChart"></canvas>
+</div>
+
+<div class="legend-title">Populism score</div>
+
+<div class="colour-key"></div>
+
+<div class="colour-labels">
+<span>Lower populism</span>
+<span>Higher populism</span>
+</div>
+
+<div id="databaseStatus" class="status"></div>
+
+<div class="note">
+These scores are derived from the responses in this exercise. The labels
+are intended as teaching aids rather than definitive descriptions of an
+individual's political beliefs.
+</div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* ==========================================================
+   1. SUPABASE SETTINGS
+
+   REPLACE THESE TWO VALUES WITH YOUR OWN DETAILS.
+   ========================================================== */
+
+const SUPABASE_URL =
+  "YOUR-SUPABASE-URL";
+
+const SUPABASE_KEY =
+  "YOUR-PUBLISHABLE-KEY";
+
+const db = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+
+/* ==========================================================
+   2. QUESTIONS
+   ========================================================== */
+
+const questions = [
+
+  {
+    id: "lr1",
+    dimension: "lr",
+    text: "Government should redistribute income from the better off to those who are less well off."
+  },
+
+  {
+    id: "lr2",
+    dimension: "lr",
+    text: "Big business takes advantage of ordinary people."
+  },
+
+  {
+    id: "lr3",
+    dimension: "lr",
+    text: "Ordinary working people do not get their fair share of the nation’s wealth."
+  },
+
+  {
+    id: "lr4",
+    dimension: "lr",
+    text: "There is one law for the rich and one for the poor."
+  },
+
+  {
+    id: "lr5",
+    dimension: "lr",
+    text: "Management will always try to get the better of employees if it gets the chance."
+  },
+
+  {
+    id: "al1",
+    dimension: "auth",
+    text: "Young people today don’t have enough respect for traditional British values."
+  },
+
+  {
+    id: "al2",
+    dimension: "auth",
+    text: "For some crimes, the death penalty is the most appropriate sentence."
+  },
+
+  {
+    id: "al3",
+    dimension: "auth",
+    text: "Schools should teach children to obey authority."
+  },
+
+  {
+    id: "al4",
+    dimension: "auth",
+    text: "Censorship of films and magazines is necessary to uphold moral standards."
+  },
+
+  {
+    id: "al5",
+    dimension: "auth",
+    text: "People who break the law should be given stiffer sentences."
+  },
+
+  {
+    id: "populism1",
+    dimension: "pop",
+    text: "The politicians in the UK Parliament need to follow the will of the people."
+  },
+
+  {
+    id: "populism2",
+    dimension: "pop",
+    text: "The people, and not politicians, should make our most important policy decisions."
+  },
+
+  {
+    id: "populism4",
+    dimension: "pop",
+    text: "I would rather be represented by a citizen than by a specialized politician."
+  },
+
+  {
+    id: "populism5",
+    dimension: "pop",
+    text: "Elected officials talk too much and take too little action."
+  },
+
+  {
+    id: "populism6",
+    dimension: "pop",
+    text: "What people call “compromise” in politics is really just selling out on one’s principles."
+  },
+
+  {
+    id: "populism7",
+    dimension: "pop",
+    text: "The differences between the politicians and the people are larger than the differences among the people."
+  }
+
+];
+
+
+/* ==========================================================
+   3. QUIZ
+   ========================================================== */
+
+let questionOrder = [];
+let currentQuestion = 0;
+let answers = {};
+let chart = null;
+
+
+function shuffle(array) {
+
+  const result = [...array];
+
+  for (let i = result.length - 1; i > 0; i--) {
+
+    const j =
+      Math.floor(Math.random() * (i + 1));
+
+    [result[i], result[j]] =
+      [result[j], result[i]];
+
+  }
+
+  return result;
+}
+
+
+function startQuiz() {
+
+  questionOrder = shuffle(questions);
+
+  currentQuestion = 0;
+  answers = {};
+
+  document
+    .getElementById("intro")
+    .classList.add("hidden");
+
+  document
+    .getElementById("results")
+    .classList.add("hidden");
+
+  document
+    .getElementById("quiz")
+    .classList.remove("hidden");
+
+  showQuestion();
+}
+
+
+function showQuestion() {
+
+  const q =
+    questionOrder[currentQuestion];
+
+  document
+    .getElementById("questionText")
+    .textContent = q.text;
+
+  document
+    .getElementById("questionNumber")
+    .textContent =
+      `Question ${currentQuestion + 1} of ${questionOrder.length}`;
+
+  const progress =
+    (currentQuestion / questionOrder.length) * 100;
+
+  document
+    .getElementById("progressFill")
+    .style.width = `${progress}%`;
+}
+
+
+function answerQuestion(value) {
+
+  const q =
+    questionOrder[currentQuestion];
+
+  answers[q.id] = value;
+
+  currentQuestion++;
+
+  if (currentQuestion < questionOrder.length) {
+
+    showQuestion();
+
+  } else {
+
+    finishQuiz();
+
+  }
+}
+
+
+/* ==========================================================
+   4. SCORING
+   ========================================================== */
+
+function dimensionMean(dimension) {
+
+  const relevant =
+    questions.filter(
+      q => q.dimension === dimension
+    );
+
+  const values =
+    relevant.map(
+      q => answers[q.id]
+    );
+
+  const total =
+    values.reduce(
+      (sum, value) => sum + value,
+      0
+    );
+
+  return total / values.length;
+}
+
+
+/*
+LEFT–RIGHT
+
+Agreement with these items indicates
+movement towards the economic left.
+
+Result:
+-100 = Left
+   0 = Centre
++100 = Right
+*/
+
+function calculateLR(mean) {
+
+  return -((mean - 3) / 2) * 100;
+
+}
+
+
+/*
+LIBERTARIAN–AUTHORITARIAN
+
+-100 = Libertarian
+   0 = Centre
++100 = Authoritarian
+*/
+
+function calculateAuth(mean) {
+
+  return ((mean - 3) / 2) * 100;
+
+}
+
+
+/*
+POPULISM
+
+0 = lowest possible score
+100 = highest possible score
+*/
+
+function calculatePopulism(mean) {
+
+  return ((mean - 1) / 4) * 100;
+
+}
+
+
+function lrClassification(score) {
+
+  if (score <= -20)
+    return "Left";
+
+  if (score >= 20)
+    return "Right";
+
+  return "Centre / mixed";
+
+}
+
+
+function authClassification(score) {
+
+  if (score <= -20)
+    return "Libertarian";
+
+  if (score >= 20)
+    return "Authoritarian";
+
+  return "Centre / mixed";
+
+}
+
+
+function popClassification(score) {
+
+  if (score < 40)
+    return "Non-populist";
+
+  if (score > 60)
+    return "Populist";
+
+  return "Mixed";
+
+}
+
+
+/* ==========================================================
+   5. DATABASE
+   ========================================================== */
+
+async function getAllResults() {
+
+  const { data, error } =
+    await db
+      .from("responses")
+      .select(
+        "left_right, lib_auth, populism"
+      );
+
+  if (error) {
+
+    console.error(
+      "Could not retrieve results:",
+      error
+    );
+
+    return [];
+
+  }
+
+  return data || [];
+}
+
+
+async function submitResult(result) {
+
+  const { error } =
+    await db
+      .from("responses")
+      .insert({
+
+        left_right:
+          result.left_right,
+
+        lib_auth:
+          result.lib_auth,
+
+        populism:
+          result.populism
+
+      });
+
+  if (error) {
+
+    console.error(
+      "Could not submit result:",
+      error
+    );
+
+    return false;
+
+  }
+
+  return true;
+}
+
+
+/* ==========================================================
+   6. FINISH QUIZ
+   ========================================================== */
+
+async function finishQuiz() {
+
+  const lrMean =
+    dimensionMean("lr");
+
+  const authMean =
+    dimensionMean("auth");
+
+  const popMean =
+    dimensionMean("pop");
+
+
+  const myResult = {
+
+    left_right:
+      calculateLR(lrMean),
+
+    lib_auth:
+      calculateAuth(authMean),
+
+    populism:
+      calculatePopulism(popMean)
+
+  };
+
+
+  /*
+  First download existing results.
+
+  This happens BEFORE adding the current
+  respondent so their point does not appear twice.
+  */
+
+  const existingResults =
+    await getAllResults();
+
+
+  /*
+  Prevent ordinary accidental double submissions
+  from the same browser.
+  */
+
+  const alreadySubmitted =
+    localStorage.getItem(
+      "political_attitudes_submitted"
+    ) === "yes";
+
+
+  let submitted = false;
+
+  if (!alreadySubmitted) {
+
+    submitted =
+      await submitResult(myResult);
+
+    if (submitted) {
+
+      localStorage.setItem(
+        "political_attitudes_submitted",
+        "yes"
+      );
+
+    }
+
+  }
+
+
+  showResults(
+    myResult,
+    existingResults,
+    alreadySubmitted,
+    submitted
+  );
+
+}
+
+
+/* ==========================================================
+   7. RESULTS PAGE
+   ========================================================== */
+
+function showResults(
+  myResult,
+  existingResults,
+  alreadySubmitted,
+  submitted
+) {
+
+  document
+    .getElementById("quiz")
+    .classList.add("hidden");
+
+  document
+    .getElementById("results")
+    .classList.remove("hidden");
+
+
+  document
+    .getElementById("lrNumber")
+    .textContent =
+      Math.round(myResult.left_right);
+
+  document
+    .getElementById("lrLabel")
+    .textContent =
+      lrClassification(
+        myResult.left_right
+      );
+
+
+  document
+    .getElementById("authNumber")
+    .textContent =
+      Math.round(myResult.lib_auth);
+
+  document
+    .getElementById("authLabel")
+    .textContent =
+      authClassification(
+        myResult.lib_auth
+      );
+
+
+  document
+    .getElementById("popNumber")
+    .textContent =
+      Math.round(myResult.populism);
+
+  document
+    .getElementById("popLabel")
+    .textContent =
+      popClassification(
+        myResult.populism
+      );
+
+
+  const status =
+    document.getElementById(
+      "databaseStatus"
+    );
+
+
+  if (submitted) {
+
+    status.textContent =
+      "Your anonymous result has been added to the class data.";
+
+  } else if (alreadySubmitted) {
+
+    status.textContent =
+      "This browser has already submitted a response, so another result has not been added.";
+
+  } else {
+
+    status.textContent =
+      "Your result could not be added to the class data, but you can still view your own result.";
+
+  }
+
+
+  drawPoliticalChart(
+    existingResults,
+    myResult
+  );
+
+}
+
+
+/* ==========================================================
+   8. POPULISM COLOUR
+   ========================================================== */
+
+function interpolateColour(
+  start,
+  end,
+  t,
+  alpha
+) {
+
+  const r =
+    Math.round(
+      start[0] +
+      (end[0] - start[0]) * t
+    );
+
+  const g =
+    Math.round(
+      start[1] +
+      (end[1] - start[1]) * t
+    );
+
+  const b =
+    Math.round(
+      start[2] +
+      (end[2] - start[2]) * t
+    );
+
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+
+function populismColour(
+  score,
+  alpha = 0.75
+) {
+
+  const low =
+    [253,231,37];
+
+  const middle =
+    [33,145,140];
+
+  const high =
+    [68,1,84];
+
+
+  if (score <= 50) {
+
+    return interpolateColour(
+      low,
+      middle,
+      score / 50,
+      alpha
+    );
+
+  }
+
+
+  return interpolateColour(
+    middle,
+    high,
+    (score - 50) / 50,
+    alpha
+  );
+
+}
+
+
+/* ==========================================================
+   9. SCATTERPLOT
+   ========================================================== */
+
+function drawPoliticalChart(
+  results,
+  myResult
+) {
+
+  const canvas =
+    document.getElementById(
+      "politicalChart"
+    );
+
+
+  if (chart) {
+
+    chart.destroy();
+
+  }
+
+
+  chart =
+    new Chart(
+      canvas,
+      {
+
+        type: "scatter",
+
+        data: {
+
+          datasets: [
+
+            {
+              label: "Other respondents",
+
+              data:
+                results.map(
+                  r => ({
+
+                    x:
+                      Number(
+                        r.left_right
+                      ),
+
+                    y:
+                      Number(
+                        r.lib_auth
+                      ),
+
+                    populism:
+                      Number(
+                        r.populism
+                      )
+
+                  })
+                ),
+
+              pointRadius: 6,
+
+              pointHoverRadius: 8,
+
+              pointBackgroundColor:
+                context => {
+
+                  if (!context.raw)
+                    return "#777";
+
+                  return populismColour(
+                    context.raw.populism
+                  );
+
+                },
+
+              pointBorderWidth: 0
+            },
+
+
+            {
+              label: "You",
+
+              data: [{
+
+                x:
+                  myResult.left_right,
+
+                y:
+                  myResult.lib_auth,
+
+                populism:
+                  myResult.populism
+
+              }],
+
+              pointRadius: 10,
+
+              pointHoverRadius: 12,
+
+              pointBorderColor:
+                "#000",
+
+              pointBorderWidth:
+                3,
+
+              pointBackgroundColor:
+                populismColour(
+                  myResult.populism,
+                  1
+                )
+
+            }
+
+          ]
+
+        },
+
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: false,
+
+          interaction: {
+            mode: "nearest",
+            intersect: true
+          },
+
+
+          scales: {
+
+            x: {
+
+              min: -100,
+              max: 100,
+
+              title: {
+                display: true,
+                text:
+                  "Economic position: Left  ←   →  Right",
+                font: {
+                  weight: "bold"
+                }
+              },
+
+              ticks: {
+                stepSize: 25
+              },
+
+              grid: {
+
+                color:
+                  context =>
+                    context.tick.value === 0
+                    ? "#555"
+                    : "#dddddd",
+
+                lineWidth:
+                  context =>
+                    context.tick.value === 0
+                    ? 2
+                    : 1
+              }
+
+            },
+
+
+            y: {
+
+              min: -100,
+              max: 100,
+
+              title: {
+                display: true,
+                text:
+                  "Values: Libertarian  ←   →  Authoritarian",
+                font: {
+                  weight: "bold"
+                }
+              },
+
+              ticks: {
+                stepSize: 25
+              },
+
+              grid: {
+
+                color:
+                  context =>
+                    context.tick.value === 0
+                    ? "#555"
+                    : "#dddddd",
+
+                lineWidth:
+                  context =>
+                    context.tick.value === 0
+                    ? 2
+                    : 1
+              }
+
+            }
+
+          },
+
+
+          plugins: {
+
+            legend: {
+              position: "top"
+            },
+
+            tooltip: {
+
+              callbacks: {
+
+                label:
+                  context => {
+
+                    const p =
+                      context.raw;
+
+                    return [
+
+                      `Left–right: ${Math.round(p.x)}`,
+
+                      `Lib–Auth: ${Math.round(p.y)}`,
+
+                      `Populism: ${Math.round(p.populism)}`
+
+                    ];
+
+                  }
+
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+}
+
+</script>
+
+</body>
+</html>
