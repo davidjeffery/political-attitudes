@@ -11,125 +11,214 @@
 
 <style>
 
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: white;
-  color: #222;
+:root {
+  --navy: #212b58;
+  --text: #252525;
+  --muted: #666;
+  --grid: #dddddd;
+  --background: #ffffff;
 }
 
-.page {
-  width: min(1400px, 96vw);
-  margin: 20px auto;
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  color: var(--text);
+}
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
+header {
+  height: 105px;
+  padding: 15px 30px 5px;
+  text-align: center;
 }
 
 h1 {
   margin: 0;
-  text-align: center;
-  color: #212b58;
-  font-size: 2rem;
+  color: var(--navy);
+  font-size: clamp(25px, 2.1vw, 38px);
 }
 
 .subtitle {
-  text-align: center;
-  color: #666;
-  margin: 8px 0 12px;
-}
-
-.count {
-  text-align: center;
-  font-size: 1.15rem;
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.chart-container {
-  position: relative;
-  width: 100%;
-  height: 72vh;
-}
-
-.legend-title {
-  text-align: center;
-  font-weight: bold;
   margin-top: 5px;
+  color: var(--muted);
+  font-size: clamp(13px, 1vw, 18px);
 }
 
-.colour-key {
-  width: min(500px, 80%);
-  height: 18px;
-  margin: 6px auto 0;
-  border-radius: 10px;
-
-  background: linear-gradient(
-    to right,
-    #fde725,
-    #21918c,
-    #440154
-  );
+.response-count {
+  margin-top: 5px;
+  font-size: clamp(15px, 1.1vw, 20px);
+  font-weight: bold;
 }
 
-.colour-labels {
-  width: min(500px, 80%);
-  margin: 4px auto;
+/* ==========================================================
+   MAIN 9:9 + 6:9 LAYOUT
+   ========================================================== */
+
+.visuals {
+  height: calc(100vh - 105px);
+
   display: flex;
-  justify-content: space-between;
-  color: #666;
-  font-size: .9rem;
+  justify-content: center;
+  align-items: center;
+
+  gap: 22px;
+
+  padding:
+    8px
+    25px
+    22px;
 }
 
-.status {
-  text-align: center;
-  color: #777;
-  font-size: .85rem;
-  margin-top: 6px;
+/*
+LEFT:
+9 wide × 9 high
+*/
+
+.ideology-panel {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+
+  min-width: 0;
+  min-height: 0;
+
+  position: relative;
+
+  background: white;
+
+  border:
+    1px solid
+    #e3e3e3;
+
+  border-radius: 8px;
+
+  padding: 10px;
+}
+
+/*
+RIGHT:
+6 wide × 9 high
+*/
+
+.populism-panel {
+  height: 100%;
+  aspect-ratio: 2 / 3;
+
+  min-width: 0;
+  min-height: 0;
+
+  position: relative;
+
+  background: white;
+
+  border:
+    1px solid
+    #e3e3e3;
+
+  border-radius: 8px;
+
+  padding:
+    10px
+    12px
+    8px;
+}
+
+/* ==========================================================
+   RESPONSIVE FALLBACK
+   ========================================================== */
+
+@media (max-aspect-ratio: 4/3) {
+
+  html,
+  body {
+    overflow: auto;
+  }
+
+  .visuals {
+    height: auto;
+    flex-direction: column;
+  }
+
+  .ideology-panel {
+    width: 95vw;
+    height: auto;
+  }
+
+  .populism-panel {
+    width: 70vw;
+    height: auto;
+  }
+
 }
 
 </style>
 </head>
 
+
 <body>
 
-<div class="page">
+<header>
 
-<h1>Political attitudes in the room</h1>
+  <h1>Political attitudes in the room</h1>
 
-<div class="subtitle">
-Economic left–right position, libertarian–authoritarian values and populism
+  <div class="subtitle">
+    Economic left–right position, libertarian–authoritarian values and populism
+  </div>
+
+  <div
+    id="count"
+    class="response-count">
+    0 responses
+  </div>
+
+</header>
+
+
+<div class="visuals">
+
+  <!-- 9 × 9 ideological space -->
+  <div class="ideology-panel">
+
+    <canvas
+      id="politicalChart">
+    </canvas>
+
+  </div>
+
+
+  <!-- 6 × 9 populism distribution -->
+  <div class="populism-panel">
+
+    <canvas
+      id="populismChart">
+    </canvas>
+
+  </div>
+
 </div>
 
-<div id="count" class="count">
-0 responses
-</div>
-
-<div class="chart-container">
-<canvas id="politicalChart"></canvas>
-</div>
-
-<div class="legend-title">
-Colour = populism score
-</div>
-
-<div class="colour-key"></div>
-
-<div class="colour-labels">
-<span>Lower populism</span>
-<span>Higher populism</span>
-</div>
-
-<div id="status" class="status">
-Waiting for responses…
-</div>
-
-</div>
 
 
 <script>
 
 /* ==========================================================
-   1. YOUR SUPABASE DETAILS
+   1. SUPABASE CONNECTION
 
-   COPY THE SAME TWO VALUES FROM index.html
+   COPY THESE TWO VALUES FROM YOUR WORKING index.html
    ========================================================== */
 
 const SUPABASE_URL =
@@ -138,21 +227,28 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
   "sb_publishable_MSCbhs-KZgIjyiIzYpcf4g_MTl-Z0cl";
 
-const db = supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+
+const db =
+  supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
 
 /* ==========================================================
-   2. COLOUR FUNCTIONS
+   2. POPULISM COLOUR SCALE
+
+   Viridis-style:
+   yellow = lower populism
+   green = middle
+   purple = higher populism
    ========================================================== */
 
 function interpolateColour(
   start,
   end,
   t,
-  alpha
+  alpha = 0.8
 ) {
 
   const r =
@@ -174,22 +270,23 @@ function interpolateColour(
     );
 
   return `rgba(${r},${g},${b},${alpha})`;
+
 }
 
 
 function populismColour(
   score,
-  alpha = 0.8
+  alpha = 0.82
 ) {
 
   const low =
-    [253,231,37];
+    [253, 231, 37];
 
   const middle =
-    [33,145,140];
+    [33, 145, 140];
 
   const high =
-    [68,1,84];
+    [68, 1, 84];
 
 
   if (score <= 50) {
@@ -203,6 +300,7 @@ function populismColour(
 
   }
 
+
   return interpolateColour(
     middle,
     high,
@@ -214,17 +312,18 @@ function populismColour(
 
 
 /* ==========================================================
-   3. CHART
+   3. LEFT-HAND IDEOLOGICAL SPACE
    ========================================================== */
 
-const canvas =
+const politicalCanvas =
   document.getElementById(
     "politicalChart"
   );
 
-const chart =
+
+const politicalChart =
   new Chart(
-    canvas,
+    politicalCanvas,
     {
 
       type: "scatter",
@@ -234,19 +333,22 @@ const chart =
         datasets: [
 
           {
-            label: "Respondents",
+
+            label:
+              "Respondents",
 
             data: [],
 
-            pointRadius: 7,
+            pointRadius: 6,
 
             pointHoverRadius: 9,
 
             pointBackgroundColor:
               context => {
 
-                if (!context.raw)
+                if (!context.raw) {
                   return "#777";
+                }
 
                 return populismColour(
                   context.raw.populism
@@ -274,8 +376,20 @@ const chart =
         maintainAspectRatio: false,
 
         animation: {
-          duration: 400
+          duration: 350
         },
+
+        layout: {
+
+          padding: {
+            top: 5,
+            right: 5,
+            bottom: 5,
+            left: 5
+          }
+
+        },
+
 
         scales: {
 
@@ -285,21 +399,30 @@ const chart =
             max: 100,
 
             title: {
+
               display: true,
+
               text:
                 "LEFT   ←   Economic position   →   RIGHT",
+
+              color:
+                "#212b58",
 
               font: {
                 size: 16,
                 weight: "bold"
               }
+
             },
 
             ticks: {
+
               stepSize: 25,
+
               font: {
                 size: 13
               }
+
             },
 
             grid: {
@@ -327,21 +450,30 @@ const chart =
             max: 100,
 
             title: {
+
               display: true,
+
               text:
                 "LIBERTARIAN   ←   Values   →   AUTHORITARIAN",
+
+              color:
+                "#212b58",
 
               font: {
                 size: 16,
                 weight: "bold"
               }
+
             },
 
             ticks: {
+
               stepSize: 25,
+
               font: {
                 size: 13
               }
+
             },
 
             grid: {
@@ -367,9 +499,32 @@ const chart =
 
         plugins: {
 
+          title: {
+
+            display: true,
+
+            text:
+              "Left–right and libertarian–authoritarian position",
+
+            color:
+              "#212b58",
+
+            font: {
+              size: 18,
+              weight: "bold"
+            },
+
+            padding: {
+              bottom: 8
+            }
+
+          },
+
+
           legend: {
             display: false
           },
+
 
           tooltip: {
 
@@ -406,15 +561,344 @@ const chart =
 
 
 /* ==========================================================
-   4. DOWNLOAD CLASS RESULTS
+   4. MAKE POPULISM BEESWARM
+
+   Vertical scale:
+   0   = lower populism
+   100 = higher populism
+
+   Horizontal position has NO substantive meaning.
+   It is only used to separate overlapping observations.
+   ========================================================== */
+
+function makeBeeswarm(
+  results
+) {
+
+  const sorted =
+    results
+      .map(r => ({
+        score:
+          Number(r.populism)
+      }))
+      .sort(
+        (a, b) =>
+          a.score - b.score
+      );
+
+
+  const bins = {};
+
+  const points = [];
+
+
+  sorted.forEach(
+    respondent => {
+
+      const score =
+        respondent.score;
+
+
+      /*
+      Group nearby results together.
+
+      A 4-point bin works well
+      for roughly 50–200 respondents.
+      */
+
+      const bin =
+        Math.round(
+          score / 4
+        );
+
+
+      if (
+        bins[bin] === undefined
+      ) {
+
+        bins[bin] = 0;
+
+      }
+
+
+      const position =
+        bins[bin];
+
+
+      /*
+      Symmetrical horizontal stacking:
+
+      0
+      +1
+      -1
+      +2
+      -2
+      etc.
+      */
+
+      let offset = 0;
+
+
+      if (position > 0) {
+
+        const level =
+          Math.ceil(
+            position / 2
+          );
+
+
+        offset =
+          position % 2 === 1
+          ? level
+          : -level;
+
+      }
+
+
+      points.push({
+
+        x:
+          offset,
+
+        y:
+          score,
+
+        populism:
+          score
+
+      });
+
+
+      bins[bin]++;
+
+    }
+  );
+
+
+  return points;
+
+}
+
+
+/* ==========================================================
+   5. RIGHT-HAND POPULISM BEESWARM
+   ========================================================== */
+
+const populismCanvas =
+  document.getElementById(
+    "populismChart"
+  );
+
+
+const populismChart =
+  new Chart(
+    populismCanvas,
+    {
+
+      type: "scatter",
+
+      data: {
+
+        datasets: [
+
+          {
+
+            label:
+              "Respondents",
+
+            data: [],
+
+            pointRadius:
+              6,
+
+            pointHoverRadius:
+              9,
+
+            pointBackgroundColor:
+              context => {
+
+                if (!context.raw) {
+                  return "#777";
+                }
+
+                return populismColour(
+                  context.raw.populism,
+                  0.85
+                );
+
+              },
+
+            pointBorderColor:
+              "rgba(0,0,0,0.25)",
+
+            pointBorderWidth:
+              1
+
+          }
+
+        ]
+
+      },
+
+
+      options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        animation: {
+          duration: 350
+        },
+
+
+        layout: {
+
+          padding: {
+            top: 5,
+            right: 15,
+            bottom: 5,
+            left: 5
+          }
+
+        },
+
+
+        scales: {
+
+          /*
+          Horizontal position is just
+          the beeswarm displacement.
+          */
+
+          x: {
+
+            min: -9,
+            max: 9,
+
+            display: false,
+
+            grid: {
+              display: false
+            },
+
+            border: {
+              display: false
+            }
+
+          },
+
+
+          /*
+          The meaningful populism axis.
+          */
+
+          y: {
+
+            min: 0,
+            max: 100,
+
+            title: {
+
+              display: true,
+
+              text:
+                "POPULISM SCORE",
+
+              color:
+                "#212b58",
+
+              font: {
+                size: 16,
+                weight: "bold"
+              }
+
+            },
+
+            ticks: {
+
+              stepSize: 20,
+
+              font: {
+                size: 14
+              }
+
+            },
+
+            grid: {
+
+              color:
+                "#e4e4e4",
+
+              lineWidth:
+                1
+
+            }
+
+          }
+
+        },
+
+
+        plugins: {
+
+          title: {
+
+            display: true,
+
+            text:
+              "Distribution of populist attitudes",
+
+            color:
+              "#212b58",
+
+            font: {
+              size: 18,
+              weight: "bold"
+            },
+
+            padding: {
+              bottom: 8
+            }
+
+          },
+
+
+          legend: {
+            display: false
+          },
+
+
+          tooltip: {
+
+            callbacks: {
+
+              label:
+                context =>
+                  `Populism: ${Math.round(context.raw.populism)}`
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+  );
+
+
+/* ==========================================================
+   6. RETRIEVE AND DISPLAY DATA
    ========================================================== */
 
 async function refreshResults() {
 
-  const status =
-    document.getElementById("status");
-
-  const { data, error } =
+  const {
+    data,
+    error
+  } =
     await db
       .from("responses")
       .select(
@@ -424,10 +908,10 @@ async function refreshResults() {
 
   if (error) {
 
-    console.error(error);
-
-    status.textContent =
-      "Could not retrieve class results.";
+    console.error(
+      "Could not retrieve results:",
+      error
+    );
 
     return;
 
@@ -438,51 +922,82 @@ async function refreshResults() {
     data || [];
 
 
-  chart.data.datasets[0].data =
-    results.map(
-      r => ({
+  /* -------------------------------
+     UPDATE IDEOLOGICAL SPACE
+     ------------------------------- */
 
-        x:
-          Number(
-            r.left_right
-          ),
+  politicalChart
+    .data
+    .datasets[0]
+    .data =
 
-        y:
-          Number(
-            r.lib_auth
-          ),
+      results.map(
+        r => ({
 
-        populism:
-          Number(
-            r.populism
-          )
+          x:
+            Number(
+              r.left_right
+            ),
 
-      })
-    );
+          y:
+            Number(
+              r.lib_auth
+            ),
+
+          populism:
+            Number(
+              r.populism
+            )
+
+        })
+      );
 
 
-  chart.update();
+  politicalChart.update();
 
+
+  /* -------------------------------
+     UPDATE POPULISM BEESWARM
+     ------------------------------- */
+
+  populismChart
+    .data
+    .datasets[0]
+    .data =
+
+      makeBeeswarm(
+        results
+      );
+
+
+  populismChart.update();
+
+
+  /* -------------------------------
+     UPDATE N
+     ------------------------------- */
 
   document
     .getElementById("count")
     .textContent =
+
       results.length === 1
+
       ? "1 response"
+
       : `${results.length} responses`;
-
-
-  status.textContent =
-    "Live class results";
 
 }
 
 
 /* ==========================================================
-   5. REFRESH AUTOMATICALLY
+   7. LIVE REFRESH
+
+   Refresh immediately, then every 3 seconds.
    ========================================================== */
 
 refreshResults();
+
 
 setInterval(
   refreshResults,
