@@ -1,1607 +1,920 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0">
+<title>Political Attitudes in the Room</title>
 
-<title>
-Political Attitudes in the Room
-</title>
-
-
-<!-- Supabase -->
-<script
-  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-</script>
-
-
-<!-- Chart.js: main ideological scatterplot -->
-<script
-  src="https://cdn.jsdelivr.net/npm/chart.js">
-</script>
-
-
-<!-- Plotly: violin plot -->
-<script
-  src="https://cdn.plot.ly/plotly-2.35.2.min.js">
-</script>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
 <style>
-
 :root {
-
   --navy: #212b58;
   --text: #252525;
   --muted: #666666;
   --grid: #dddddd;
   --background: #ffffff;
-
+  --uk-grey: #9aa0a6;
 }
 
-
-* {
-  box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
 
 html,
 body {
-
   margin: 0;
-
   width: 100%;
   height: 100%;
-
   overflow: hidden;
-
 }
-
 
 body {
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  background:
-    var(--background);
-
-  color:
-    var(--text);
-
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  color: var(--text);
 }
-
-
-/* ==========================================================
-   HEADER
-   ========================================================== */
 
 header {
-
-  height: 100px;
-
-  padding:
-    12px
-    30px
-    4px;
-
-  text-align:
-    center;
-
+  height: 122px;
+  padding: 10px 30px 4px;
+  text-align: center;
 }
-
 
 h1 {
-
   margin: 0;
-
-  color:
-    var(--navy);
-
-  font-size:
-    clamp(
-      25px,
-      2.1vw,
-      38px
-    );
-
+  color: var(--navy);
+  font-size: clamp(24px, 2vw, 36px);
 }
-
 
 .subtitle {
-
-  margin-top:
-    5px;
-
-  color:
-    var(--muted);
-
-  font-size:
-    clamp(
-      13px,
-      1vw,
-      18px
-    );
-
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: clamp(13px, .95vw, 17px);
 }
 
+.header-row {
+  margin-top: 7px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+}
 
 .response-count {
-
-  margin-top:
-    5px;
-
-  font-size:
-    clamp(
-      15px,
-      1.1vw,
-      20px
-    );
-
-  font-weight:
-    bold;
-
+  font-size: clamp(15px, 1.05vw, 19px);
+  font-weight: bold;
 }
 
+.compare-toggle {
+  border: 2px solid var(--navy);
+  background: white;
+  color: var(--navy);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  transition: .15s ease;
+}
 
-/* ==========================================================
-   9:9 + 6:9 LAYOUT
-   ========================================================== */
+.compare-toggle:hover {
+  background: #f4f5f8;
+}
+
+.compare-toggle[aria-pressed="true"] {
+  background: var(--navy);
+  color: white;
+}
+
+.compare-toggle:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
 
 .visuals {
-
-  height:
-    calc(
-      100vh - 100px
-    );
-
-  display:
-    flex;
-
-  justify-content:
-    center;
-
-  align-items:
-    center;
-
-  gap:
-    20px;
-
-  padding:
-    5px
-    24px
-    18px;
-
+  height: calc(100vh - 122px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 5px 24px 18px;
 }
 
-
-/*
-LEFT PANEL
-9 × 9
-*/
-
+/* 9 × 9 */
 .ideology-panel {
-
-  height:
-    100%;
-
-  aspect-ratio:
-    1 / 1;
-
-  min-width:
-    0;
-
-  min-height:
-    0;
-
-  position:
-    relative;
-
-  background:
-    white;
-
-  border:
-    1px solid
-    #e3e3e3;
-
-  border-radius:
-    8px;
-
-  padding:
-    8px;
-
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: white;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  padding: 8px;
 }
 
-
-/*
-RIGHT PANEL
-6 × 9
-*/
-
+/* 6 × 9 */
 .populism-panel {
-
-  height:
-    100%;
-
-  aspect-ratio:
-    2 / 3;
-
-  min-width:
-    0;
-
-  min-height:
-    0;
-
-  position:
-    relative;
-
-  background:
-    white;
-
-  border:
-    1px solid
-    #e3e3e3;
-
-  border-radius:
-    8px;
-
-  padding:
-    4px;
-
+  height: 100%;
+  aspect-ratio: 2 / 3;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: white;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  padding: 4px;
 }
-
 
 #populismPlot {
-
-  width:
-    100%;
-
-  height:
-    100%;
-
+  width: 100%;
+  height: 100%;
 }
 
-
-/* ==========================================================
-   SMALL-SCREEN FALLBACK
-   ========================================================== */
-
-@media
-(max-aspect-ratio: 4/3) {
-
+@media (max-aspect-ratio: 4/3) {
   html,
   body {
-
-    overflow:
-      auto;
-
+    overflow: auto;
   }
 
+  header {
+    height: auto;
+  }
+
+  .header-row {
+    flex-wrap: wrap;
+  }
 
   .visuals {
-
-    height:
-      auto;
-
-    flex-direction:
-      column;
-
+    height: auto;
+    flex-direction: column;
   }
-
 
   .ideology-panel {
-
-    width:
-      95vw;
-
-    height:
-      auto;
-
+    width: 95vw;
+    height: auto;
   }
-
 
   .populism-panel {
-
-    width:
-      70vw;
-
-    height:
-      650px;
-
+    width: 70vw;
+    height: 650px;
   }
-
 }
-
 </style>
-
 </head>
-
 
 <body>
 
-
 <header>
-
-  <h1>
-    Political attitudes in the room
-  </h1>
+  <h1>Political attitudes in the room</h1>
 
   <div class="subtitle">
-
-    Economic left–right position,
-    libertarian–authoritarian values
-    and populism
-
+    Economic left–right position, libertarian–authoritarian values and populism
   </div>
 
-  <div
-    id="count"
-    class="response-count">
+  <div class="header-row">
+    <div id="count" class="response-count">
+      0 student responses
+    </div>
 
-    0 responses
-
+    <button
+      id="compareToggle"
+      class="compare-toggle"
+      type="button"
+      aria-pressed="false"
+      disabled>
+      Compare with UK
+    </button>
   </div>
-
 </header>
-
-
 
 <div class="visuals">
 
-
-  <!-- =========================================
-       LEFT: TWO-DIMENSIONAL IDEOLOGICAL SPACE
-       ========================================= -->
-
   <div class="ideology-panel">
-
-    <canvas
-      id="politicalChart">
-    </canvas>
-
+    <canvas id="politicalChart"></canvas>
   </div>
-
-
-
-  <!-- =========================================
-       RIGHT: POPULISM VIOLIN PLOT
-       ========================================= -->
 
   <div class="populism-panel">
-
-    <div
-      id="populismPlot">
-    </div>
-
+    <div id="populismPlot"></div>
   </div>
-
 
 </div>
 
-
-
 <script>
-
-
-/* ==========================================================
-   1. SUPABASE CONNECTION
-
-   COPY THE SAME TWO VALUES FROM index.html
-   ========================================================== */
-
-
-
 const SUPABASE_URL =
   "https://ftlrakgamcoznsyfubdy.supabase.co";
 
 const SUPABASE_KEY =
   "sb_publishable_MSCbhs-KZgIjyiIzYpcf4g_MTl-Z0cl";
 
-
 const db =
   supabase.createClient(
-
     SUPABASE_URL,
-
     SUPABASE_KEY
-
   );
 
-
+let studentResults = [];
+let ukResults = [];
+let showUK = false;
 
 /* ==========================================================
-   2. POPULISM COLOUR SCALE
-
-   Used for the dots on the 2D graph.
-
-   Lower populism:
-   yellow
-
-   Mid-range:
-   green/teal
-
-   Higher populism:
-   purple
+   POPULISM COLOUR SCALE FOR STUDENT DOTS
    ========================================================== */
 
-
 function interpolateColour(
-
   start,
   end,
   t,
   alpha = 0.8
-
 ) {
-
-
   const r =
     Math.round(
-
-      start[0]
-      +
-      (
-        end[0]
-        -
-        start[0]
-      )
-      *
-      t
-
+      start[0] +
+      (end[0] - start[0]) * t
     );
-
 
   const g =
     Math.round(
-
-      start[1]
-      +
-      (
-        end[1]
-        -
-        start[1]
-      )
-      *
-      t
-
+      start[1] +
+      (end[1] - start[1]) * t
     );
-
 
   const b =
     Math.round(
-
-      start[2]
-      +
-      (
-        end[2]
-        -
-        start[2]
-      )
-      *
-      t
-
+      start[2] +
+      (end[2] - start[2]) * t
     );
 
-
-  return (
-
-    `rgba(
-      ${r},
-      ${g},
-      ${b},
-      ${alpha}
-    )`
-
-  );
-
+  return `rgba(${r},${g},${b},${alpha})`;
 }
-
-
 
 function populismColour(
-
   score,
   alpha = 0.82
-
 ) {
+  const low = [253,231,37];
+  const middle = [33,145,140];
+  const high = [68,1,84];
 
-
-  const low =
-    [
-      253,
-      231,
-      37
-    ];
-
-
-  const middle =
-    [
-      33,
-      145,
-      140
-    ];
-
-
-  const high =
-    [
-      68,
-      1,
-      84
-    ];
-
-
-  if (
-    score <= 50
-  ) {
-
-
+  if (score <= 50) {
     return interpolateColour(
-
       low,
-
       middle,
-
       score / 50,
-
       alpha
-
     );
-
-
   }
 
-
   return interpolateColour(
-
     middle,
-
     high,
-
-    (
-      score - 50
-    )
-    /
-    50,
-
+    (score - 50) / 50,
     alpha
-
   );
-
 }
 
-
-
 /* ==========================================================
-   3. TWO-DIMENSIONAL POLITICAL SPACE
+   2D IDEOLOGICAL SPACE
    ========================================================== */
 
-
 const politicalCanvas =
-
   document.getElementById(
     "politicalChart"
   );
 
-
-
 const politicalChart =
-
   new Chart(
-
     politicalCanvas,
-
     {
-
-
-      type:
-        "scatter",
-
+      type: "scatter",
 
       data: {
-
-
-        datasets: [
-
-
-          {
-
-
-            label:
-              "Respondents",
-
-
-            data:
-              [],
-
-
-            pointRadius:
-              6,
-
-
-            pointHoverRadius:
-              9,
-
-
-            pointBackgroundColor:
-
-              context => {
-
-
-                if (
-                  !context.raw
-                ) {
-
-                  return "#777777";
-
-                }
-
-
-                return populismColour(
-
-                  context
-                    .raw
-                    .populism
-
-                );
-
-              },
-
-
-            pointBorderColor:
-
-              "rgba(0,0,0,0.25)",
-
-
-            pointBorderWidth:
-              1
-
-
-          }
-
-
-        ]
-
-
+        datasets: []
       },
 
-
-
       options: {
-
-
-        responsive:
-          true,
-
-
-        maintainAspectRatio:
-          false,
-
+        responsive: true,
+        maintainAspectRatio: false,
 
         animation: {
-
-          duration:
-            350
-
+          duration: 300
         },
-
 
         layout: {
-
-
           padding: {
-
-            top:
-              5,
-
-            right:
-              5,
-
-            bottom:
-              5,
-
-            left:
-              5
-
+            top: 5,
+            right: 5,
+            bottom: 5,
+            left: 5
           }
-
-
         },
-
-
 
         scales: {
-
-
           x: {
-
-
-            min:
-              -100,
-
-
-            max:
-              100,
-
+            min: -100,
+            max: 100,
 
             title: {
-
-
-              display:
-                true,
-
-
+              display: true,
               text:
-
                 "LEFT   ←   Economic position   →   RIGHT",
-
-
-              color:
-                "#212b58",
-
-
+              color: "#212b58",
               font: {
-
-                size:
-                  16,
-
-                weight:
-                  "bold"
-
+                size: 16,
+                weight: "bold"
               }
-
-
             },
-
 
             ticks: {
-
-
-              stepSize:
-                25,
-
-
+              stepSize: 25,
               font: {
-
-                size:
-                  13
-
+                size: 13
               }
-
-
             },
 
-
             grid: {
-
-
               color:
-
                 context =>
-
-                  context
-                    .tick
-                    .value === 0
-
-                    ? "#555555"
-
-                    : "#dddddd",
-
+                  context.tick.value === 0
+                  ? "#555555"
+                  : "#dddddd",
 
               lineWidth:
-
                 context =>
-
-                  context
-                    .tick
-                    .value === 0
-
-                    ? 2
-
-                    : 1
-
-
+                  context.tick.value === 0
+                  ? 2
+                  : 1
             }
-
-
           },
-
-
 
           y: {
-
-
-            min:
-              -100,
-
-
-            max:
-              100,
-
+            min: -100,
+            max: 100,
 
             title: {
-
-
-              display:
-                true,
-
-
+              display: true,
               text:
-
                 "LIBERTARIAN   ←   Values   →   AUTHORITARIAN",
-
-
-              color:
-                "#212b58",
-
-
+              color: "#212b58",
               font: {
-
-                size:
-                  16,
-
-                weight:
-                  "bold"
-
+                size: 16,
+                weight: "bold"
               }
-
-
             },
-
 
             ticks: {
-
-
-              stepSize:
-                25,
-
-
+              stepSize: 25,
               font: {
-
-                size:
-                  13
-
+                size: 13
               }
-
-
             },
-
 
             grid: {
-
-
               color:
-
                 context =>
-
-                  context
-                    .tick
-                    .value === 0
-
-                    ? "#555555"
-
-                    : "#dddddd",
-
+                  context.tick.value === 0
+                  ? "#555555"
+                  : "#dddddd",
 
               lineWidth:
-
                 context =>
-
-                  context
-                    .tick
-                    .value === 0
-
-                    ? 2
-
-                    : 1
-
-
+                  context.tick.value === 0
+                  ? 2
+                  : 1
             }
-
-
           }
-
-
         },
 
-
-
         plugins: {
-
-
           title: {
-
-
-            display:
-              true,
-
-
+            display: true,
             text:
-
               "Left–right and libertarian–authoritarian position",
-
-
-            color:
-              "#212b58",
-
-
+            color: "#212b58",
             font: {
-
-              size:
-                18,
-
-              weight:
-                "bold"
-
+              size: 18,
+              weight: "bold"
             },
-
-
             padding: {
-
-              bottom:
-                8
-
+              bottom: 8
             }
-
-
           },
-
-
 
           legend: {
-
-            display:
-              false
-
+            display: true,
+            position: "top",
+            labels: {
+              usePointStyle: true,
+              boxWidth: 10
+            }
           },
 
-
-
           tooltip: {
-
-
             callbacks: {
-
-
               label:
-
                 context => {
-
-
                   const p =
                     context.raw;
 
+                  if (
+                    context.dataset.label ===
+                    "UK BES W27"
+                  ) {
+                    return [
+                      `UK BES W27`,
+                      `Left–right: ${Math.round(p.x)}`,
+                      `Lib–Auth: ${Math.round(p.y)}`,
+                      `Populism: ${Math.round(p.populism)}`
+                    ];
+                  }
 
                   return [
-
-
-                    `Left–right: ${
-                      Math.round(
-                        p.x
-                      )
-                    }`,
-
-
-                    `Lib–Auth: ${
-                      Math.round(
-                        p.y
-                      )
-                    }`,
-
-
-                    `Populism: ${
-                      Math.round(
-                        p.populism
-                      )
-                    }`
-
-
+                    `Student`,
+                    `Left–right: ${Math.round(p.x)}`,
+                    `Lib–Auth: ${Math.round(p.y)}`,
+                    `Populism: ${Math.round(p.populism)}`
                   ];
-
-
                 }
-
-
             }
-
-
           }
-
-
         }
-
-
       }
-
-
     }
-
   );
 
+function updatePoliticalChart() {
+  const datasets = [];
 
+  if (showUK) {
+    datasets.push({
+      label: "UK BES W27",
+      data:
+        ukResults.map(
+          r => ({
+            x: Number(r.left_right),
+            y: Number(r.lib_auth),
+            populism: Number(r.populism)
+          })
+        ),
+      pointRadius: 2.2,
+      pointHoverRadius: 4,
+      pointBackgroundColor:
+        "rgba(135,135,135,0.18)",
+      pointBorderWidth: 0,
+      order: 1
+    });
+  }
+
+  datasets.push({
+    label: "Students",
+    data:
+      studentResults.map(
+        r => ({
+          x: Number(r.left_right),
+          y: Number(r.lib_auth),
+          populism: Number(r.populism)
+        })
+      ),
+    pointRadius: 6,
+    pointHoverRadius: 9,
+    pointBackgroundColor:
+      context => {
+        if (!context.raw) {
+          return "#777777";
+        }
+
+        return populismColour(
+          context.raw.populism
+        );
+      },
+    pointBorderColor:
+      "rgba(0,0,0,0.25)",
+    pointBorderWidth: 1,
+    order: 2
+  });
+
+  politicalChart.data.datasets =
+    datasets;
+
+  politicalChart.update();
+}
 
 /* ==========================================================
-   4. POPULISM VIOLIN PLOT
+   SPLIT VIOLIN PLOT
+
+   Students = left half
+   UK BES W27 = right half
    ========================================================== */
 
-
-function updateViolinPlot(
-
+function numericPopulism(
   results
-
 ) {
+  return results
+    .map(
+      r =>
+        Number(
+          r.populism
+        )
+    )
+    .filter(
+      score =>
+        Number.isFinite(
+          score
+        )
+    );
+}
 
+function updateViolinPlot() {
+  const studentScores =
+    numericPopulism(
+      studentResults
+    );
 
-  const scores =
+  const ukScores =
+    numericPopulism(
+      ukResults
+    );
 
-    results
+  const studentTrace = {
+    type: "violin",
+    y: studentScores,
+    x:
+      studentScores.map(
+        () => "Populism"
+      ),
 
-      .map(
+    name: "Students",
+    side:
+      showUK
+      ? "negative"
+      : "both",
 
-        r =>
-          Number(
-            r.populism
-          )
-
-      )
-
-      .filter(
-
-        score =>
-          Number.isFinite(
-            score
-          )
-
-      );
-
-
-
-  /*
-  Plotly violin trace.
-
-  The box and meanline make the distribution
-  easier to interpret in a lecture.
-  */
-
-
-  const trace = {
-
-
-    type:
-      "violin",
-
-
-    y:
-      scores,
-
-
-    name:
-      "",
-
-
-    orientation:
-      "v",
-
+    orientation: "v",
 
     box: {
-
-      visible:
-        true
-
+      visible: true
     },
-
 
     meanline: {
-
-      visible:
-        true
-
+      visible: true
     },
 
-
-    points:
-      false,
-
-
-    spanmode:
-      "hard",
-
-
-    span: [
-      0,
-      100
-    ],
-
-
-    scalemode:
-      "width",
-
+    points: false,
+    spanmode: "hard",
+    span: [0,100],
+    scalemode: "width",
+    scalegroup:
+      showUK
+      ? "comparison"
+      : "students",
 
     width:
-      0.8,
-
+      showUK
+      ? 1.15
+      : 0.85,
 
     line: {
-
-      color:
-        "rgb(33,145,140)",
-
-      width:
-        2
-
+      color: "#212b58",
+      width: 2
     },
 
-
     fillcolor:
-      "rgba(33,145,140,0.55)",
-
+      "rgba(33,43,88,0.55)",
 
     hoveron:
       "violins+kde",
 
-
     hovertemplate:
+      "Students<br>Populism score: %{y:.1f}<extra></extra>",
 
-      "Populism score: %{y:.1f}<extra></extra>"
-
-
+    legendgroup:
+      "Students"
   };
 
+  const traces =
+    [studentTrace];
 
-
-  const layout = {
-
-
-    title: {
-
-
-      text:
-
-        "Distribution of populist attitudes",
-
-
-      font: {
-
-        size:
-          20,
-
-        color:
-          "#212b58"
-
-      },
-
-
+  if (showUK) {
+    traces.push({
+      type: "violin",
+      y: ukScores,
       x:
-        0.5,
+        ukScores.map(
+          () => "Populism"
+        ),
 
+      name: "UK BES W27",
+      side: "positive",
+      orientation: "v",
 
-      xanchor:
-        "center"
-
-
-    },
-
-
-    margin: {
-
-      l:
-        72,
-
-      r:
-        30,
-
-      t:
-        65,
-
-      b:
-        55
-
-    },
-
-
-    paper_bgcolor:
-      "#ffffff",
-
-
-    plot_bgcolor:
-      "#ffffff",
-
-
-    showlegend:
-      false,
-
-
-    xaxis: {
-
-
-      visible:
-        false,
-
-
-      fixedrange:
-        true
-
-
-    },
-
-
-    yaxis: {
-
-
-      range: [
-        0,
-        100
-      ],
-
-
-      fixedrange:
-        true,
-
-
-      dtick:
-        20,
-
-
-      title: {
-
-
-        text:
-          "POPULISM SCORE",
-
-
-        font: {
-
-          size:
-            16,
-
-          color:
-            "#212b58"
-
-        }
-
-
+      box: {
+        visible: true
       },
 
-
-      tickfont: {
-
-        size:
-          14,
-
-        color:
-          "#333333"
-
+      meanline: {
+        visible: true
       },
 
+      points: false,
+      spanmode: "hard",
+      span: [0,100],
+      scalemode: "width",
+      scalegroup: "comparison",
+      width: 1.15,
 
-      gridcolor:
-        "#dddddd",
-
-
-      zeroline:
-        false
-
-
-    },
-
-
-    annotations: [
-
-
-      {
-
-
-        x:
-          0.5,
-
-
-        y:
-          0,
-
-
-        xref:
-          "paper",
-
-
-        yref:
-          "paper",
-
-
-        text:
-          "Lower populism",
-
-
-        showarrow:
-          false,
-
-
-        xanchor:
-          "center",
-
-
-        yanchor:
-          "top",
-
-
-        yshift:
-          -35,
-
-
-        font: {
-
-          size:
-            13,
-
-          color:
-            "#666666"
-
-        }
-
-
+      line: {
+        color: "#777777",
+        width: 2
       },
 
+      fillcolor:
+        "rgba(150,150,150,0.45)",
 
-      {
+      hoveron:
+        "violins+kde",
 
+      hovertemplate:
+        "UK BES W27<br>Populism score: %{y:.1f}<extra></extra>",
 
-        x:
-          0.5,
-
-
-        y:
-          1,
-
-
-        xref:
-          "paper",
-
-
-        yref:
-          "paper",
-
-
-        text:
-          "Higher populism",
-
-
-        showarrow:
-          false,
-
-
-        xanchor:
-          "center",
-
-
-        yanchor:
-          "bottom",
-
-
-        yshift:
-          8,
-
-
-        font: {
-
-          size:
-            13,
-
-          color:
-            "#666666"
-
-        }
-
-
-      }
-
-
-    ]
-
-
-  };
-
-
-
-  const config = {
-
-
-    responsive:
-      true,
-
-
-    displayModeBar:
-      false,
-
-
-    staticPlot:
-      false
-
-
-  };
-
-
-
-  Plotly.react(
-
-    "populismPlot",
-
-    [trace],
-
-    layout,
-
-    config
-
-  );
-
-}
-
-
-
-/* ==========================================================
-   5. RETRIEVE DATA FROM SUPABASE
-   ========================================================== */
-
-
-async function refreshResults() {
-
-
-  const {
-
-    data,
-    error
-
-  } =
-
-
-    await db
-
-      .from(
-        "responses"
-      )
-
-      .select(
-
-        "left_right, lib_auth, populism"
-
-      );
-
-
-
-  if (
-    error
-  ) {
-
-
-    console.error(
-
-      "Could not retrieve results:",
-
-      error
-
-    );
-
-
-    return;
-
+      legendgroup:
+        "UK BES W27"
+    });
   }
 
+  const layout = {
+    title: {
+      text:
+        showUK
+        ? "Populism: students vs UK BES W27"
+        : "Distribution of student populist attitudes",
 
+      font: {
+        size: 20,
+        color: "#212b58"
+      },
 
-  const results =
-    data || [];
+      x: 0.5,
+      xanchor: "center"
+    },
 
+    margin: {
+      l: 70,
+      r: 25,
+      t: 78,
+      b: 45
+    },
 
+    paper_bgcolor: "#ffffff",
+    plot_bgcolor: "#ffffff",
 
-  /* ========================================================
-     UPDATE 2D POLITICAL SPACE
-     ======================================================== */
+    showlegend: showUK,
 
+    legend: {
+      orientation: "h",
+      x: 0.5,
+      xanchor: "center",
+      y: 1.04,
+      yanchor: "bottom",
+      font: {
+        size: 13
+      }
+    },
 
-  politicalChart
-    .data
-    .datasets[0]
-    .data =
+    violinmode: "overlay",
 
+    xaxis: {
+      visible: false,
+      fixedrange: true
+    },
 
-      results.map(
+    yaxis: {
+      range: [0,100],
+      fixedrange: true,
+      dtick: 20,
 
-        r => ({
+      title: {
+        text: "POPULISM SCORE",
+        font: {
+          size: 16,
+          color: "#212b58"
+        }
+      },
 
+      tickfont: {
+        size: 14,
+        color: "#333333"
+      },
 
-          x:
+      gridcolor: "#dddddd",
+      zeroline: false
+    },
 
-            Number(
-              r.left_right
-            ),
+    annotations:
+      showUK
+      ? [
+          {
+            x: 0.31,
+            y: 1.0,
+            xref: "paper",
+            yref: "paper",
+            text: "<b>STUDENTS</b>",
+            showarrow: false,
+            yshift: -8,
+            font: {
+              size: 14,
+              color: "#212b58"
+            }
+          },
+          {
+            x: 0.69,
+            y: 1.0,
+            xref: "paper",
+            yref: "paper",
+            text: "<b>UK BES W27</b>",
+            showarrow: false,
+            yshift: -8,
+            font: {
+              size: 14,
+              color: "#666666"
+            }
+          }
+        ]
+      : []
+  };
 
+  const config = {
+    responsive: true,
+    displayModeBar: false,
+    staticPlot: false
+  };
 
-          y:
-
-            Number(
-              r.lib_auth
-            ),
-
-
-          populism:
-
-            Number(
-              r.populism
-            )
-
-
-        })
-
-      );
-
-
-
-  politicalChart.update();
-
-
-
-  /* ========================================================
-     UPDATE VIOLIN PLOT
-     ======================================================== */
-
-
-  updateViolinPlot(
-    results
+  Plotly.react(
+    "populismPlot",
+    traces,
+    layout,
+    config
   );
-
-
-
-  /* ========================================================
-     UPDATE RESPONSE COUNT
-     ======================================================== */
-
-
-  document
-    .getElementById(
-      "count"
-    )
-    .textContent =
-
-
-      results.length === 1
-
-        ? "1 response"
-
-        : `${results.length} responses`;
-
-
 }
 
-
-
 /* ==========================================================
-   6. LIVE UPDATE
-
-   Load immediately, then refresh every three seconds.
+   LOAD STATIC UK BES W27 REFERENCE DATA
    ========================================================== */
 
+async function loadUKData() {
+  const toggle =
+    document.getElementById(
+      "compareToggle"
+    );
 
-refreshResults();
+  try {
+    const response =
+      await fetch(
+        "uk_bes_w27_scores.json",
+        {
+          cache: "force-cache"
+        }
+      );
 
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status}`
+      );
+    }
 
-setInterval(
+    const json =
+      await response.json();
 
-  refreshResults,
+    ukResults =
+      Array.isArray(json)
+      ? json
+      : (json.data || []);
 
-  3000
+    toggle.disabled = false;
 
-);
+  } catch (error) {
+    console.error(
+      "Could not load UK BES comparison data:",
+      error
+    );
 
+    toggle.disabled = true;
+    toggle.textContent =
+      "UK comparison unavailable";
+  }
+}
 
+/* ==========================================================
+   LIVE STUDENT RESULTS
+   ========================================================== */
+
+async function refreshStudentResults() {
+  const {
+    data,
+    error
+  } =
+    await db
+      .from("responses")
+      .select(
+        "left_right, lib_auth, populism"
+      );
+
+  if (error) {
+    console.error(
+      "Could not retrieve student results:",
+      error
+    );
+
+    return;
+  }
+
+  studentResults =
+    data || [];
+
+  updateDisplay();
+}
+
+/* ==========================================================
+   HEADER / TOGGLE
+   ========================================================== */
+
+function updateHeader() {
+  const count =
+    document.getElementById(
+      "count"
+    );
+
+  if (showUK) {
+    count.textContent =
+      `${studentResults.length} student responses · ${ukResults.length.toLocaleString()} UK BES W27 respondents`;
+  } else {
+    count.textContent =
+      studentResults.length === 1
+      ? "1 student response"
+      : `${studentResults.length} student responses`;
+  }
+
+  const toggle =
+    document.getElementById(
+      "compareToggle"
+    );
+
+  toggle.setAttribute(
+    "aria-pressed",
+    showUK
+      ? "true"
+      : "false"
+  );
+
+  toggle.textContent =
+    showUK
+    ? "Hide UK comparison"
+    : "Compare with UK";
+}
+
+function updateDisplay() {
+  updateHeader();
+  updatePoliticalChart();
+  updateViolinPlot();
+}
+
+document
+  .getElementById(
+    "compareToggle"
+  )
+  .addEventListener(
+    "click",
+    () => {
+      if (
+        ukResults.length === 0
+      ) {
+        return;
+      }
+
+      showUK =
+        !showUK;
+
+      updateDisplay();
+    }
+  );
+
+/* ==========================================================
+   INITIALISE
+   ========================================================== */
+
+async function initialise() {
+  await loadUKData();
+  await refreshStudentResults();
+
+  setInterval(
+    refreshStudentResults,
+    3000
+  );
+}
+
+initialise();
 </script>
 
-
 </body>
-
 </html>
-
-
