@@ -7,7 +7,6 @@
 <title>Political Attitudes in the Room</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
 <style>
@@ -15,12 +14,12 @@
   --navy: #212b58;
   --text: #252525;
   --muted: #666666;
-  --grid: #dddddd;
   --background: #ffffff;
-  --uk-grey: #9aa0a6;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 html,
 body {
@@ -37,7 +36,7 @@ body {
 }
 
 header {
-  height: 122px;
+  height: 118px;
   padding: 10px 30px 4px;
   text-align: center;
 }
@@ -76,7 +75,9 @@ h1 {
   font: inherit;
   font-weight: bold;
   cursor: pointer;
-  transition: .15s ease;
+  transition:
+    background-color .12s ease,
+    color .12s ease;
 }
 
 .compare-toggle:hover {
@@ -94,7 +95,7 @@ h1 {
 }
 
 .visuals {
-  height: calc(100vh - 122px);
+  height: calc(100vh - 118px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -112,7 +113,7 @@ h1 {
   background: white;
   border: 1px solid #e3e3e3;
   border-radius: 8px;
-  padding: 8px;
+  padding: 4px;
 }
 
 /* 6 × 9 */
@@ -128,6 +129,7 @@ h1 {
   padding: 4px;
 }
 
+#politicalPlot,
 #populismPlot {
   width: 100%;
   height: 100%;
@@ -154,7 +156,7 @@ h1 {
 
   .ideology-panel {
     width: 95vw;
-    height: auto;
+    height: 95vw;
   }
 
   .populism-panel {
@@ -193,7 +195,7 @@ h1 {
 <div class="visuals">
 
   <div class="ideology-panel">
-    <canvas id="politicalChart"></canvas>
+    <div id="politicalPlot"></div>
   </div>
 
   <div class="populism-panel">
@@ -203,6 +205,10 @@ h1 {
 </div>
 
 <script>
+/* ==========================================================
+   1. SUPABASE
+   ========================================================== */
+
 const SUPABASE_URL =
   "https://ftlrakgamcoznsyfubdy.supabase.co";
 
@@ -218,315 +224,441 @@ const db =
 let studentResults = [];
 let ukResults = [];
 let showUK = false;
+let lastStudentSignature = "";
+
 
 /* ==========================================================
-   POPULISM COLOUR SCALE FOR STUDENT DOTS
+   2. COMMON PLOTLY SETTINGS
    ========================================================== */
 
-function interpolateColour(
-  start,
-  end,
-  t,
-  alpha = 0.8
-) {
-  const r =
-    Math.round(
-      start[0] +
-      (end[0] - start[0]) * t
-    );
+const plotConfig = {
+  responsive: true,
+  displayModeBar: false,
+  staticPlot: false
+};
 
-  const g =
-    Math.round(
-      start[1] +
-      (end[1] - start[1]) * t
-    );
-
-  const b =
-    Math.round(
-      start[2] +
-      (end[2] - start[2]) * t
-    );
-
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function populismColour(
-  score,
-  alpha = 0.82
-) {
-  const low = [253,231,37];
-  const middle = [33,145,140];
-  const high = [68,1,84];
-
-  if (score <= 50) {
-    return interpolateColour(
-      low,
-      middle,
-      score / 50,
-      alpha
-    );
-  }
-
-  return interpolateColour(
-    middle,
-    high,
-    (score - 50) / 50,
-    alpha
-  );
-}
 
 /* ==========================================================
-   2D IDEOLOGICAL SPACE
+   3. STUDENT COLOUR SCALE
    ========================================================== */
 
-const politicalCanvas =
-  document.getElementById(
-    "politicalChart"
-  );
+const studentColourScale = [
+  [0.00, "#fde725"],
+  [0.50, "#21918c"],
+  [1.00, "#440154"]
+];
 
-const politicalChart =
-  new Chart(
-    politicalCanvas,
-    {
-      type: "scatter",
 
-      data: {
-        datasets: []
-      },
+/* ==========================================================
+   4. LEFT-HAND POLITICAL SPACE
 
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
+   Students remain individual coloured points.
 
-        animation: {
-          duration: 300
-        },
+   In comparison mode, UK BES W27 is shown as a density
+   contour rather than thousands of individual dots.
+   ========================================================== */
 
-        layout: {
-          padding: {
-            top: 5,
-            right: 5,
-            bottom: 5,
-            left: 5
-          }
-        },
+function updatePoliticalPlot() {
 
-        scales: {
-          x: {
-            min: -100,
-            max: 100,
+  const traces = [];
 
-            title: {
-              display: true,
-              text:
-                "LEFT   ←   Economic position   →   RIGHT",
-              color: "#212b58",
-              font: {
-                size: 16,
-                weight: "bold"
-              }
-            },
 
-            ticks: {
-              stepSize: 25,
-              font: {
-                size: 13
-              }
-            },
+  if (showUK && ukResults.length > 0) {
 
-            grid: {
-              color:
-                context =>
-                  context.tick.value === 0
-                  ? "#555555"
-                  : "#dddddd",
+    /*
+    UK density layer:
+    the filled 2D contour shows where BES respondents
+    are concentrated without overwhelming the student dots.
+    */
 
-              lineWidth:
-                context =>
-                  context.tick.value === 0
-                  ? 2
-                  : 1
-            }
-          },
+    traces.push({
 
-          y: {
-            min: -100,
-            max: 100,
+      type: "histogram2dcontour",
 
-            title: {
-              display: true,
-              text:
-                "LIBERTARIAN   ←   Values   →   AUTHORITARIAN",
-              color: "#212b58",
-              font: {
-                size: 16,
-                weight: "bold"
-              }
-            },
-
-            ticks: {
-              stepSize: 25,
-              font: {
-                size: 13
-              }
-            },
-
-            grid: {
-              color:
-                context =>
-                  context.tick.value === 0
-                  ? "#555555"
-                  : "#dddddd",
-
-              lineWidth:
-                context =>
-                  context.tick.value === 0
-                  ? 2
-                  : 1
-            }
-          }
-        },
-
-        plugins: {
-          title: {
-            display: true,
-            text:
-              "Left–right and libertarian–authoritarian position",
-            color: "#212b58",
-            font: {
-              size: 18,
-              weight: "bold"
-            },
-            padding: {
-              bottom: 8
-            }
-          },
-
-          legend: {
-            display: true,
-            position: "top",
-            labels: {
-              usePointStyle: true,
-              boxWidth: 10
-            }
-          },
-
-          tooltip: {
-            callbacks: {
-              label:
-                context => {
-                  const p =
-                    context.raw;
-
-                  if (
-                    context.dataset.label ===
-                    "UK BES W27"
-                  ) {
-                    return [
-                      `UK BES W27`,
-                      `Left–right: ${Math.round(p.x)}`,
-                      `Lib–Auth: ${Math.round(p.y)}`,
-                      `Populism: ${Math.round(p.populism)}`
-                    ];
-                  }
-
-                  return [
-                    `Student`,
-                    `Left–right: ${Math.round(p.x)}`,
-                    `Lib–Auth: ${Math.round(p.y)}`,
-                    `Populism: ${Math.round(p.populism)}`
-                  ];
-                }
-            }
-          }
-        }
-      }
-    }
-  );
-
-function updatePoliticalChart() {
-  const datasets = [];
-
-  if (showUK) {
-    datasets.push({
-      label: "UK BES W27",
-      data:
+      x:
         ukResults.map(
-          r => ({
-            x: Number(r.left_right),
-            y: Number(r.lib_auth),
-            populism: Number(r.populism)
-          })
+          r => Number(r.left_right)
         ),
-      pointRadius: 2.2,
-      pointHoverRadius: 4,
-      pointBackgroundColor:
-        "rgba(135,135,135,0.18)",
-      pointBorderWidth: 0,
-      order: 1
+
+      y:
+        ukResults.map(
+          r => Number(r.lib_auth)
+        ),
+
+      name:
+        "UK BES W27",
+
+      showscale:
+        false,
+
+      showlegend:
+        true,
+
+      hoverinfo:
+        "skip",
+
+      ncontours:
+        10,
+
+      histnorm:
+        "probability density",
+
+      colorscale: [
+        [0.00, "rgba(245,245,245,0.00)"],
+        [0.20, "rgba(220,220,220,0.18)"],
+        [0.45, "rgba(185,185,185,0.28)"],
+        [0.70, "rgba(145,145,145,0.38)"],
+        [1.00, "rgba(100,100,100,0.52)"]
+      ],
+
+      contours: {
+        coloring: "fill",
+        showlines: true
+      },
+
+      line: {
+        color: "rgba(90,90,90,0.55)",
+        width: 1
+      }
+
     });
+
   }
 
-  datasets.push({
-    label: "Students",
-    data:
-      studentResults.map(
-        r => ({
-          x: Number(r.left_right),
-          y: Number(r.lib_auth),
-          populism: Number(r.populism)
-        })
-      ),
-    pointRadius: 6,
-    pointHoverRadius: 9,
-    pointBackgroundColor:
-      context => {
-        if (!context.raw) {
-          return "#777777";
-        }
 
-        return populismColour(
-          context.raw.populism
-        );
-      },
-    pointBorderColor:
-      "rgba(0,0,0,0.25)",
-    pointBorderWidth: 1,
-    order: 2
+  /*
+  Student points:
+  colour continues to encode populism from 0 to 100.
+  */
+
+  traces.push({
+
+    type: "scatter",
+
+    mode: "markers",
+
+    x:
+      studentResults.map(
+        r => Number(r.left_right)
+      ),
+
+    y:
+      studentResults.map(
+        r => Number(r.lib_auth)
+      ),
+
+    name:
+      "Students",
+
+    customdata:
+      studentResults.map(
+        r => Number(r.populism)
+      ),
+
+    marker: {
+
+      size:
+        10,
+
+      color:
+        studentResults.map(
+          r => Number(r.populism)
+        ),
+
+      cmin:
+        0,
+
+      cmax:
+        100,
+
+      colorscale:
+        studentColourScale,
+
+      showscale:
+        false,
+
+      line: {
+        color:
+          "rgba(0,0,0,0.30)",
+        width:
+          0.7
+      }
+
+    },
+
+    hovertemplate:
+      "Student" +
+      "<br>Left–right: %{x:.0f}" +
+      "<br>Lib–Auth: %{y:.0f}" +
+      "<br>Populism: %{customdata:.0f}" +
+      "<extra></extra>"
+
   });
 
-  politicalChart.data.datasets =
-    datasets;
 
-  politicalChart.update();
+  /*
+  Plotly's histogram contour legend symbol is not especially
+  intuitive, so in comparison mode we use a small invisible
+  helper trace to create a clean UK legend marker.
+  */
+
+  if (showUK && ukResults.length > 0) {
+
+    traces.push({
+
+      type: "scatter",
+
+      mode: "markers",
+
+      x: [null],
+      y: [null],
+
+      name:
+        "UK BES W27",
+
+      marker: {
+        size:
+          10,
+        color:
+          "rgba(120,120,120,0.55)",
+        symbol:
+          "square"
+      },
+
+      hoverinfo:
+        "skip",
+
+      showlegend:
+        true
+
+    });
+
+    /*
+    Suppress the contour trace's own legend entry;
+    the helper marker above gives a cleaner legend.
+    */
+
+    traces[0].showlegend =
+      false;
+
+  }
+
+
+  const layout = {
+
+    title: {
+
+      text:
+        "Left–right and libertarian–authoritarian position",
+
+      font: {
+        size:
+          19,
+        color:
+          "#212b58"
+      },
+
+      x:
+        0.5,
+
+      xanchor:
+        "center"
+
+    },
+
+    margin: {
+      l:
+        74,
+      r:
+        26,
+      t:
+        76,
+      b:
+        70
+    },
+
+    paper_bgcolor:
+      "#ffffff",
+
+    plot_bgcolor:
+      "#ffffff",
+
+    showlegend:
+      true,
+
+    legend: {
+
+      orientation:
+        "h",
+
+      x:
+        0.5,
+
+      xanchor:
+        "center",
+
+      y:
+        1.02,
+
+      yanchor:
+        "bottom",
+
+      font: {
+        size:
+          13
+      }
+
+    },
+
+    hovermode:
+      "closest",
+
+    uirevision:
+      "fixed",
+
+    xaxis: {
+
+      range:
+        [-100,100],
+
+      fixedrange:
+        true,
+
+      dtick:
+        25,
+
+      title: {
+
+        text:
+          "LEFT   ←   Economic position   →   RIGHT",
+
+        font: {
+          size:
+            15,
+          color:
+            "#212b58"
+        }
+
+      },
+
+      tickfont: {
+        size:
+          12
+      },
+
+      gridcolor:
+        "#dddddd",
+
+      zeroline:
+        true,
+
+      zerolinecolor:
+        "#555555",
+
+      zerolinewidth:
+        2
+
+    },
+
+    yaxis: {
+
+      range:
+        [-100,100],
+
+      fixedrange:
+        true,
+
+      dtick:
+        25,
+
+      title: {
+
+        text:
+          "LIBERTARIAN   ←   Values   →   AUTHORITARIAN",
+
+        font: {
+          size:
+            15,
+          color:
+            "#212b58"
+        }
+
+      },
+
+      tickfont: {
+        size:
+          12
+      },
+
+      gridcolor:
+        "#dddddd",
+
+      zeroline:
+        true,
+
+      zerolinecolor:
+        "#555555",
+
+      zerolinewidth:
+        2,
+
+      scaleanchor:
+        "x",
+
+      scaleratio:
+        1
+
+    }
+
+  };
+
+
+  /*
+  Plotly.react replaces the data without transition animation.
+  There is no fade/redraw animation between refreshes.
+  */
+
+  Plotly.react(
+    "politicalPlot",
+    traces,
+    layout,
+    plotConfig
+  );
+
 }
 
-/* ==========================================================
-   SPLIT VIOLIN PLOT
 
-   Students = left half
-   UK BES W27 = right half
+/* ==========================================================
+   5. RIGHT-HAND POPULISM VIOLIN
+
+   Students only:
+     normal full violin.
+
+   Compare mode:
+     LEFT half  = students
+     RIGHT half = UK BES W27
+
+   Only the simple Students / UK BES W27 legend is shown.
    ========================================================== */
 
 function numericPopulism(
   results
 ) {
+
   return results
     .map(
-      r =>
-        Number(
-          r.populism
-        )
+      r => Number(r.populism)
     )
     .filter(
       score =>
-        Number.isFinite(
-          score
-        )
+        Number.isFinite(score)
     );
+
 }
 
+
 function updateViolinPlot() {
+
   const studentScores =
     numericPopulism(
       studentResults
@@ -537,34 +669,53 @@ function updateViolinPlot() {
       ukResults
     );
 
-  const studentTrace = {
-    type: "violin",
-    y: studentScores,
+
+  const traces = [{
+
+    type:
+      "violin",
+
+    y:
+      studentScores,
+
     x:
       studentScores.map(
         () => "Populism"
       ),
 
-    name: "Students",
+    name:
+      "Students",
+
     side:
       showUK
       ? "negative"
       : "both",
 
-    orientation: "v",
+    orientation:
+      "v",
 
     box: {
-      visible: true
+      visible:
+        true
     },
 
     meanline: {
-      visible: true
+      visible:
+        true
     },
 
-    points: false,
-    spanmode: "hard",
-    span: [0,100],
-    scalemode: "width",
+    points:
+      false,
+
+    spanmode:
+      "hard",
+
+    span:
+      [0,100],
+
+    scalemode:
+      "width",
+
     scalegroup:
       showUK
       ? "comparison"
@@ -572,244 +723,350 @@ function updateViolinPlot() {
 
     width:
       showUK
-      ? 1.15
-      : 0.85,
+      ? 1.10
+      : 0.82,
 
     line: {
-      color: "#212b58",
-      width: 2
+      color:
+        "#212b58",
+      width:
+        2
     },
 
     fillcolor:
-      "rgba(33,43,88,0.55)",
+      "rgba(33,43,88,0.58)",
 
     hoveron:
       "violins+kde",
 
     hovertemplate:
-      "Students<br>Populism score: %{y:.1f}<extra></extra>",
+      "Students" +
+      "<br>Populism score: %{y:.1f}" +
+      "<extra></extra>"
 
-    legendgroup:
-      "Students"
-  };
+  }];
 
-  const traces =
-    [studentTrace];
 
-  if (showUK) {
+  if (
+    showUK &&
+    ukScores.length > 0
+  ) {
+
     traces.push({
-      type: "violin",
-      y: ukScores,
+
+      type:
+        "violin",
+
+      y:
+        ukScores,
+
       x:
         ukScores.map(
           () => "Populism"
         ),
 
-      name: "UK BES W27",
-      side: "positive",
-      orientation: "v",
+      name:
+        "UK BES W27",
+
+      side:
+        "positive",
+
+      orientation:
+        "v",
 
       box: {
-        visible: true
+        visible:
+          true
       },
 
       meanline: {
-        visible: true
+        visible:
+          true
       },
 
-      points: false,
-      spanmode: "hard",
-      span: [0,100],
-      scalemode: "width",
-      scalegroup: "comparison",
-      width: 1.15,
+      points:
+        false,
+
+      spanmode:
+        "hard",
+
+      span:
+        [0,100],
+
+      scalemode:
+        "width",
+
+      scalegroup:
+        "comparison",
+
+      width:
+        1.10,
 
       line: {
-        color: "#777777",
-        width: 2
+        color:
+          "#777777",
+        width:
+          2
       },
 
       fillcolor:
-        "rgba(150,150,150,0.45)",
+        "rgba(145,145,145,0.48)",
 
       hoveron:
         "violins+kde",
 
       hovertemplate:
-        "UK BES W27<br>Populism score: %{y:.1f}<extra></extra>",
+        "UK BES W27" +
+        "<br>Populism score: %{y:.1f}" +
+        "<extra></extra>"
 
-      legendgroup:
-        "UK BES W27"
     });
+
   }
 
+
   const layout = {
+
     title: {
+
       text:
-        showUK
-        ? "Populism: students vs UK BES W27"
-        : "Distribution of student populist attitudes",
+        "Distribution of populist attitudes",
 
       font: {
-        size: 20,
-        color: "#212b58"
+        size:
+          19,
+        color:
+          "#212b58"
       },
 
-      x: 0.5,
-      xanchor: "center"
+      x:
+        0.5,
+
+      xanchor:
+        "center"
+
     },
 
     margin: {
-      l: 70,
-      r: 25,
-      t: 78,
-      b: 45
+      l:
+        68,
+      r:
+        22,
+      t:
+        76,
+      b:
+        44
     },
 
-    paper_bgcolor: "#ffffff",
-    plot_bgcolor: "#ffffff",
+    paper_bgcolor:
+      "#ffffff",
 
-    showlegend: showUK,
+    plot_bgcolor:
+      "#ffffff",
+
+    showlegend:
+      showUK,
 
     legend: {
-      orientation: "h",
-      x: 0.5,
-      xanchor: "center",
-      y: 1.04,
-      yanchor: "bottom",
+
+      orientation:
+        "v",
+
+      x:
+        0.98,
+
+      xanchor:
+        "right",
+
+      y:
+        0.98,
+
+      yanchor:
+        "top",
+
+      bgcolor:
+        "rgba(255,255,255,0.82)",
+
+      bordercolor:
+        "rgba(220,220,220,0.9)",
+
+      borderwidth:
+        1,
+
       font: {
-        size: 13
+        size:
+          12
       }
+
     },
 
-    violinmode: "overlay",
+    violinmode:
+      "overlay",
+
+    hovermode:
+      "closest",
+
+    uirevision:
+      "fixed",
 
     xaxis: {
-      visible: false,
-      fixedrange: true
+
+      visible:
+        false,
+
+      fixedrange:
+        true
+
     },
 
     yaxis: {
-      range: [0,100],
-      fixedrange: true,
-      dtick: 20,
+
+      range:
+        [0,100],
+
+      fixedrange:
+        true,
+
+      dtick:
+        20,
 
       title: {
-        text: "POPULISM SCORE",
+
+        text:
+          "POPULISM SCORE",
+
         font: {
-          size: 16,
-          color: "#212b58"
+          size:
+            15,
+          color:
+            "#212b58"
         }
+
       },
 
       tickfont: {
-        size: 14,
-        color: "#333333"
+        size:
+          13,
+        color:
+          "#333333"
       },
 
-      gridcolor: "#dddddd",
-      zeroline: false
-    },
+      gridcolor:
+        "#dddddd",
 
-    annotations:
-      showUK
-      ? [
-          {
-            x: 0.31,
-            y: 1.0,
-            xref: "paper",
-            yref: "paper",
-            text: "<b>STUDENTS</b>",
-            showarrow: false,
-            yshift: -8,
-            font: {
-              size: 14,
-              color: "#212b58"
-            }
-          },
-          {
-            x: 0.69,
-            y: 1.0,
-            xref: "paper",
-            yref: "paper",
-            text: "<b>UK BES W27</b>",
-            showarrow: false,
-            yshift: -8,
-            font: {
-              size: 14,
-              color: "#666666"
-            }
-          }
-        ]
-      : []
+      zeroline:
+        false
+
+    }
+
   };
 
-  const config = {
-    responsive: true,
-    displayModeBar: false,
-    staticPlot: false
-  };
 
   Plotly.react(
     "populismPlot",
     traces,
     layout,
-    config
+    plotConfig
   );
+
 }
 
+
 /* ==========================================================
-   LOAD STATIC UK BES W27 REFERENCE DATA
+   6. STATIC UK BES DATA
    ========================================================== */
 
 async function loadUKData() {
+
   const toggle =
     document.getElementById(
       "compareToggle"
     );
 
+
   try {
+
     const response =
       await fetch(
         "uk_bes_w27_scores.json",
         {
-          cache: "force-cache"
+          cache:
+            "force-cache"
         }
       );
 
+
     if (!response.ok) {
+
       throw new Error(
         `HTTP ${response.status}`
       );
+
     }
+
 
     const json =
       await response.json();
+
 
     ukResults =
       Array.isArray(json)
       ? json
       : (json.data || []);
 
-    toggle.disabled = false;
+
+    toggle.disabled =
+      false;
+
 
   } catch (error) {
+
     console.error(
       "Could not load UK BES comparison data:",
       error
     );
 
-    toggle.disabled = true;
+
+    toggle.disabled =
+      true;
+
+
     toggle.textContent =
       "UK comparison unavailable";
+
   }
+
 }
 
+
 /* ==========================================================
-   LIVE STUDENT RESULTS
+   7. LIVE STUDENT DATA
+
+   Poll every 3 seconds, but only redraw if the data have
+   actually changed. This removes needless flickering.
    ========================================================== */
 
+function makeStudentSignature(
+  results
+) {
+
+  return results
+    .map(
+      r =>
+        [
+          r.id,
+          r.left_right,
+          r.lib_auth,
+          r.populism
+        ].join(":")
+    )
+    .join("|");
+
+}
+
+
 async function refreshStudentResults() {
+
   const {
     data,
     error
@@ -817,48 +1074,91 @@ async function refreshStudentResults() {
     await db
       .from("responses")
       .select(
-        "left_right, lib_auth, populism"
+        "id, left_right, lib_auth, populism, created_at"
+      )
+      .order(
+        "created_at",
+        {
+          ascending:
+            true
+        }
       );
 
+
   if (error) {
+
     console.error(
       "Could not retrieve student results:",
       error
     );
 
     return;
+
   }
 
-  studentResults =
+
+  const freshResults =
     data || [];
 
+
+  const freshSignature =
+    makeStudentSignature(
+      freshResults
+    );
+
+
+  /*
+  If nothing has changed, do absolutely nothing.
+  The page still checks Supabase every three seconds,
+  but the charts are not redrawn.
+  */
+
+  if (
+    freshSignature ===
+    lastStudentSignature
+  ) {
+
+    return;
+
+  }
+
+
+  lastStudentSignature =
+    freshSignature;
+
+
+  studentResults =
+    freshResults;
+
+
   updateDisplay();
+
 }
 
+
 /* ==========================================================
-   HEADER / TOGGLE
+   8. HEADER / TOGGLE
    ========================================================== */
 
 function updateHeader() {
+
   const count =
     document.getElementById(
       "count"
     );
 
-  if (showUK) {
-    count.textContent =
-      `${studentResults.length} student responses · ${ukResults.length.toLocaleString()} UK BES W27 respondents`;
-  } else {
-    count.textContent =
-      studentResults.length === 1
-      ? "1 student response"
-      : `${studentResults.length} student responses`;
-  }
+
+  count.textContent =
+    studentResults.length === 1
+    ? "1 student response"
+    : `${studentResults.length} student responses`;
+
 
   const toggle =
     document.getElementById(
       "compareToggle"
     );
+
 
   toggle.setAttribute(
     "aria-pressed",
@@ -867,17 +1167,27 @@ function updateHeader() {
       : "false"
   );
 
+
   toggle.textContent =
     showUK
-    ? "Hide UK comparison"
+    ? "Students only"
     : "Compare with UK";
+
 }
 
+
 function updateDisplay() {
+
   updateHeader();
-  updatePoliticalChart();
+  updatePoliticalPlot();
   updateViolinPlot();
+
 }
+
+
+/* ==========================================================
+   9. TOGGLE
+   ========================================================== */
 
 document
   .getElementById(
@@ -886,32 +1196,53 @@ document
   .addEventListener(
     "click",
     () => {
+
       if (
         ukResults.length === 0
       ) {
+
         return;
+
       }
+
 
       showUK =
         !showUK;
 
+
       updateDisplay();
+
     }
   );
 
+
 /* ==========================================================
-   INITIALISE
+   10. INITIALISE
    ========================================================== */
 
 async function initialise() {
+
   await loadUKData();
+
+
+  /*
+  Force the first load to draw even if there are zero rows.
+  */
+
+  lastStudentSignature =
+    "__initial__";
+
+
   await refreshStudentResults();
+
 
   setInterval(
     refreshStudentResults,
     3000
   );
+
 }
+
 
 initialise();
 </script>
